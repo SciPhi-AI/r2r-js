@@ -1,0 +1,26 @@
+{
+  "name": "r2r-js",
+  "version": "1.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "form-data": "^4.0.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.0",
+    "@types/form-data": "^2.5.0",
+    "@types/node": "^20.12.4",
+    "@types/uuid": "^9.0.8",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3"
+  }
+}
