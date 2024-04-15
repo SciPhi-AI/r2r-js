@@ -1,33 +1,50 @@
 import axios, { AxiosResponse } from 'axios';
 import FormData from 'form-data';
-import fs from 'fs';
 
-class R2RClient {
+export class R2RClient {
   private baseUrl: string;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
-  async uploadAndProcessFile(
+  async uploadFile(
     documentId: string,
-    filePath: string,
+    fileOrPath: File | string,
     metadata: Record<string, any> = {},
     settings: Record<string, any> = {}
   ): Promise<any> {
     const url = `${this.baseUrl}/upload_and_process_file/`;
     const formData = new FormData();
-    formData.append('file', fs.createReadStream(filePath));
+  
+    if (typeof fileOrPath === 'string') {
+      // Node.js environment
+      if (typeof window === 'undefined') {
+        // Check if running in a Node.js environment
+        const fs = require('fs');
+        formData.append('file', fs.createReadStream(fileOrPath));
+      } else {
+        throw new Error('Uploading a file path is not supported in web browsers.');
+      }
+    } else {
+      // Web application environment
+      formData.append('file', fileOrPath);
+    }
+
     formData.append('document_id', documentId);
     formData.append('metadata', JSON.stringify(metadata));
     formData.append('settings', JSON.stringify(settings));
-
-    const response: AxiosResponse = await axios.post(url, formData, {
-      headers: formData.getHeaders(),
-    });
+  
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    };
+  
+    const response: AxiosResponse = await axios.post(url, formData, config);
     return response.data;
   }
-
+  
   async addEntry(
     documentId: string,
     blobs: Record<string, string>,
@@ -136,6 +153,44 @@ class R2RClient {
     const response: AxiosResponse = await axios.get(url);
     return response.data;
   }
-}
 
-export default R2RClient;
+
+  async streamingRequest(
+    endpoint: string,
+    data: object,
+    onData: (value: string) => void,
+    onError?: (status: number) => void
+  ): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
+        body: JSON.stringify(data),
+      });
+  
+      if (response.status !== 200) {
+        onError?.(response.status);
+        return;
+      }
+  
+      if (!response.body) {
+        return;
+      }
+  
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+  
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        onData(decoder.decode(value));
+      }
+    } catch (error) {
+      console.error("Error fetching data", error);
+      onError?.(500);
+    }
+  }
+}
