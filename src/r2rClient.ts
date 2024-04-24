@@ -81,7 +81,8 @@ export class R2RClient {
 
   async search(
     query: string,
-    limit: number = 10,
+    searchLimit: number = 25,
+    rerankLimit: number = 15,
     filters: Record<string, any> = {},
     settings: Record<string, any> = {}
   ): Promise<any> {
@@ -89,7 +90,8 @@ export class R2RClient {
     const data = {
       query,
       filters,
-      limit,
+      search_limit: searchLimit,
+      rerank_limit: rerankLimit,
       settings,
     };
     const response: AxiosResponse = await axios.post(url, data);
@@ -98,16 +100,22 @@ export class R2RClient {
 
   async ragCompletion(
     query: string,
-    limit: number = 10,
+    searchLimit: number = 25,
+    rerankLimit: number = 15,
     filters: Record<string, any> = {},
     settings: Record<string, any> = {},
     generationConfig: Record<string, any> = {}
   ): Promise<any> {
+    if (generationConfig.stream) {
+      throw new Error("To stream, use the `streamRagCompletion` method.");
+    }
+
     const url = `${this.baseUrl}/rag_completion/`;
     const data = {
       query,
       filters,
-      limit,
+      search_limit: searchLimit,
+      rerank_limit: rerankLimit,
       settings,
       generation_config: generationConfig,
     };
@@ -134,6 +142,39 @@ export class R2RClient {
     return response.data;
   }
 
+  async streamRagCompletion(
+    query: string,
+    searchLimit: number = 25,
+    rerankLimit: number = 15,
+    filters: Record<string, any> = {},
+    settings: Record<string, any> = {},
+    generationConfig: Record<string, any> = {}
+  ): Promise<void> {
+    if (!generationConfig.stream) {
+      throw new Error("`streamRagCompletion` method is only for streaming.");
+    }
+
+    const url = `${this.baseUrl}/rag_completion/`;
+    const data = {
+      query,
+      filters,
+      search_limit: searchLimit,
+      rerank_limit: rerankLimit,
+      settings,
+      generation_config: generationConfig,
+    };
+
+    const headers = {
+      accept: "application/json",
+      "Content-Type": "application/json",
+    };
+
+    await this.streamingRequest(url, data, (chunk) => {
+      // Handle the streaming response chunk
+      console.log(chunk);
+    });
+  }
+
   async filteredDeletion(key: string, value: boolean | number | string): Promise<any> {
     const url = `${this.baseUrl}/filtered_deletion/`;
     const response: AxiosResponse = await axios.delete(url, {
@@ -154,6 +195,19 @@ export class R2RClient {
     return response.data;
   }
 
+  async getUserIds(): Promise<any> {
+    const url = `${this.baseUrl}/get_user_ids/`;
+    const response: AxiosResponse = await axios.get(url);
+    return response.data;
+  }
+
+  async getUserDocuments(userId: string): Promise<any> {
+    const url = `${this.baseUrl}/get_user_documents/`;
+    const response: AxiosResponse = await axios.get(url, {
+      params: { user_id: userId },
+    });
+    return response.data;
+  }
 
   async streamingRequest(
     endpoint: string,
