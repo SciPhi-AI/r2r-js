@@ -8,43 +8,30 @@ export class R2RClient {
     this.baseUrl = baseUrl;
   }
 
-  async uploadFile(
+  async uploadAndProcessFile(
     documentId: string,
-    fileOrPath: File | string,
+    filePath: string,
     metadata: Record<string, any> = {},
     settings: Record<string, any> = {}
   ): Promise<any> {
     const url = `${this.baseUrl}/upload_and_process_file/`;
     const formData = new FormData();
-  
-    if (typeof fileOrPath === 'string') {
-      // Node.js environment
-      if (typeof window === 'undefined') {
-        // Check if running in a Node.js environment
-        const fs = require('fs');
-        formData.append('file', fs.createReadStream(fileOrPath));
-      } else {
-        throw new Error('Uploading a file path is not supported in web browsers.');
-      }
-    } else {
-      // Web application environment
-      formData.append('file', fileOrPath);
-    }
-
+    const fileStream = require('fs').createReadStream(filePath);
+    formData.append('file', fileStream);
     formData.append('document_id', documentId);
     formData.append('metadata', JSON.stringify(metadata));
     formData.append('settings', JSON.stringify(settings));
-  
+
     const config = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     };
-  
+
     const response: AxiosResponse = await axios.post(url, formData, config);
     return response.data;
   }
-  
+
   async addEntry(
     documentId: string,
     blobs: Record<string, string>,
@@ -88,7 +75,7 @@ export class R2RClient {
   ): Promise<any> {
     const url = `${this.baseUrl}/search/`;
     const data = {
-      query,
+      message: query,
       filters,
       search_limit: searchLimit,
       rerank_limit: rerankLimit,
@@ -99,20 +86,22 @@ export class R2RClient {
   }
 
   async ragCompletion(
-    query: string,
+    message: string,
     searchLimit: number = 25,
     rerankLimit: number = 15,
     filters: Record<string, any> = {},
     settings: Record<string, any> = {},
     generationConfig: Record<string, any> = {}
   ): Promise<any> {
-    if (generationConfig.stream) {
+    const stream = generationConfig.stream || false;
+
+    if (stream) {
       throw new Error("To stream, use the `streamRagCompletion` method.");
     }
 
     const url = `${this.baseUrl}/rag_completion/`;
     const data = {
-      query,
+      message,
       filters,
       search_limit: searchLimit,
       rerank_limit: rerankLimit,
@@ -124,7 +113,7 @@ export class R2RClient {
   }
 
   async eval(
-    query: string,
+    message: string,
     context: string,
     completionText: string,
     runId: string,
@@ -132,7 +121,7 @@ export class R2RClient {
   ): Promise<any> {
     const url = `${this.baseUrl}/eval/`;
     const data = {
-      query,
+      message,
       context,
       completion_text: completionText,
       run_id: runId,
@@ -143,20 +132,21 @@ export class R2RClient {
   }
 
   async streamRagCompletion(
-    query: string,
+    message: string,
     searchLimit: number = 25,
     rerankLimit: number = 15,
     filters: Record<string, any> = {},
     settings: Record<string, any> = {},
     generationConfig: Record<string, any> = {}
   ): Promise<void> {
-    if (!generationConfig.stream) {
+    const stream = generationConfig.stream || false;
+    if (!stream) {
       throw new Error("`streamRagCompletion` method is only for streaming.");
     }
 
     const url = `${this.baseUrl}/rag_completion/`;
     const data = {
-      query,
+      message,
       filters,
       search_limit: searchLimit,
       rerank_limit: rerankLimit,
