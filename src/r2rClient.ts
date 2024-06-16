@@ -1,5 +1,25 @@
-import axios, { AxiosResponse } from 'axios';
-import FormData from 'form-data';
+import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
+
+function defaultSerializer(obj: any): any {
+  if (obj instanceof uuidv4) {
+    return obj.toString();
+  }
+  // if (obj instanceof DocumentType) {
+  //   return obj.value;
+  // }
+  if (obj instanceof Uint8Array) {
+    throw new TypeError('Bytes serialization is not yet supported.');
+  }
+  throw new TypeError(`Type ${typeof obj} not serializable.`);
+}
+
+function createQueryString(params: Record<string, any>): string {
+  return Object.keys(params)
+    .map(
+      (key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
+    )
+    .join('&');
+}
 
 export class R2RClient {
   private baseUrl: string;
@@ -7,247 +27,435 @@ export class R2RClient {
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
-  
-  async uploadFile(
-    documentId: string,
-    fileOrPath: File | string,
-    metadata: Record<string, any> = {},
-    settings: Record<string, any> = {}
+
+  async updatePrompt(
+    name: string,
+    template?: string,
+    inputTypes?: Record<string, string>
   ): Promise<any> {
-    const url = `${this.baseUrl}/upload_and_process_file/`;
-    const formData = new FormData();
-  
-    if (typeof fileOrPath === 'string') {
-      // Node.js environment
-      if (typeof window === 'undefined') {
-        // Check if running in a Node.js environment
-        const fs = require('fs');
-        formData.append('file', fs.createReadStream(fileOrPath));
-      } else {
-        throw new Error('Uploading a file path is not supported in web browsers.');
-      }
-    } else {
-      // Web application environment
-      formData.append('file', fileOrPath);
+    const url = `${this.baseUrl}/update_prompt`;
+    const data = {
+      name,
+      template,
+      input_types: inputTypes,
+    };
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data, defaultSerializer),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
     }
 
-    formData.append('document_id', documentId);
-    formData.append('metadata', JSON.stringify(metadata));
-    formData.append('settings', JSON.stringify(settings));
-  
-    const config = {
+    return response.json();
+  }
+
+  async ingestDocuments(documents: Record<string, any>[]): Promise<any> {
+    const url = `${this.baseUrl}/ingest_documents`;
+    const data = { documents };
+    const response = await fetch(url, {
+      method: 'POST',
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/json',
       },
-    };
-  
-    const response: AxiosResponse = await axios.post(url, formData, config);
-    return response.data;
+      body: JSON.stringify(data, defaultSerializer),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    return response.json();
   }
 
-  async addEntry(
-    documentId: string,
-    blobs: Record<string, string>,
-    metadata: Record<string, any> = {},
-    doUpsert: boolean = false,
-    settings: Record<string, any> = {}
+  async ingestFiles(
+    metadatas: Record<string, any>[] | null,
+    files: File[],
+    ids?: string[] | null,
+    userIds?: string[] | null
   ): Promise<any> {
-    const url = `${this.baseUrl}/add_entry/`;
-    const data = {
-      entry: {
-        document_id: documentId,
-        blobs,
-        metadata,
-      },
-      settings: settings || { embedding_settings: { do_upsert: doUpsert } },
-    };
-    const response: AxiosResponse = await axios.post(url, data);
-    return response.data;
+    const url = `${this.baseUrl}/ingest_files`;
+    const formData = new FormData();
+    console.log('metadatas = ', metadatas);
+    console.log('userIds = ', userIds);
+
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    formData.append('metadatas', JSON.stringify(metadatas || null));
+
+    if (ids !== undefined && ids !== null) {
+      formData.append('ids', JSON.stringify(ids));
+    } else {
+      formData.append('ids', JSON.stringify(null));
+    }
+
+    if (userIds !== undefined && userIds !== null) {
+      formData.append('user_ids', JSON.stringify(userIds));
+    } else {
+      formData.append('user_ids', JSON.stringify(null));
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const responseJson = await response.json();
+      throw new Error(responseJson.detail);
+    }
+
+    return response.json();
   }
 
-  async addEntries(
-    entries: Record<string, any>[],
-    doUpsert: boolean = false,
-    settings: Record<string, any> = {}
+  async updateDocuments(documents: Record<string, any>[]): Promise<any> {
+    const url = `${this.baseUrl}/update_documents`;
+    const data = { documents };
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data, defaultSerializer),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    return response.json();
+  }
+
+  async updateFiles(
+    metadatas: Record<string, any>[] | null,
+    files: File[],
+    ids: string[],
+    userIds?: string[] | null
   ): Promise<any> {
-    const url = `${this.baseUrl}/add_entries/`;
-    const data = {
-      entries,
-      settings: settings || { embedding_settings: { do_upsert: doUpsert } },
-    };
-    const response: AxiosResponse = await axios.post(url, data);
-    return response.data;
+    const url = `${this.baseUrl}/update_files`;
+    const formData = new FormData();
+
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    formData.append('metadatas', JSON.stringify(metadatas || null));
+    formData.append('ids', JSON.stringify(ids));
+
+    if (userIds !== undefined && userIds !== null) {
+      formData.append('user_ids', JSON.stringify(userIds));
+    } else {
+      formData.append('user_ids', JSON.stringify(null));
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const responseJson = await response.json();
+      throw new Error(responseJson.detail);
+    }
+
+    return response.json();
   }
 
   async search(
     query: string,
-    searchLimit: number = 25,
-    rerankLimit: number = 15,
-    filters: Record<string, any> = {},
-    settings: Record<string, any> = {}
+    searchFilters: Record<string, any> = {},
+    searchLimit: number = 10
   ): Promise<any> {
-    const url = `${this.baseUrl}/search/`;
+    const url = `${this.baseUrl}/search`;
     const data = {
-      message: query,
-      filters,
+      query,
+      search_filters: JSON.stringify(searchFilters),
       search_limit: searchLimit,
-      rerank_limit: rerankLimit,
-      settings,
     };
-    const response: AxiosResponse = await axios.post(url, data);
-    return response.data;
-  }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-  async ragCompletion(
-    message: string,
-    searchLimit: number = 25,
-    rerankLimit: number = 15,
-    filters: Record<string, any> = {},
-    settings: Record<string, any> = {},
-    generationConfig: Record<string, any> = {}
-  ): Promise<any> {
-    const stream = generationConfig.stream || false;
-
-    if (stream) {
-      throw new Error("To stream, use the `streamRagCompletion` method.");
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
     }
 
-    const url = `${this.baseUrl}/rag_completion/`;
-    const data = {
-      message,
-      filters,
-      search_limit: searchLimit,
-      rerank_limit: rerankLimit,
-      settings,
-      generation_config: generationConfig,
-    };
-    const response: AxiosResponse = await axios.post(url, data);
-    return response.data;
+    return response.json();
   }
 
-  async eval(
+  async rag(
     message: string,
-    context: string,
-    completionText: string,
-    runId: string,
-    settings: Record<string, any> = {}
+    searchFilters: Record<string, any> = {},
+    searchLimit: number = 10,
+    generationConfig: Record<string, any> = {},
+    streaming: boolean = false
   ): Promise<any> {
-    const url = `${this.baseUrl}/eval/`;
+    const url = `${this.baseUrl}/rag`;
     const data = {
       message,
-      context,
-      completion_text: completionText,
-      run_id: runId,
-      settings,
-    };
-    const response: AxiosResponse = await axios.post(url, data);
-    return response.data;
-  }
-
-  async streamRagCompletion(
-    message: string,
-    searchLimit: number = 25,
-    rerankLimit: number = 15,
-    filters: Record<string, any> = {},
-    settings: Record<string, any> = {},
-    generationConfig: Record<string, any> = {}
-  ): Promise<void> {
-    const stream = generationConfig.stream || false;
-    if (!stream) {
-      throw new Error("`streamRagCompletion` method is only for streaming.");
-    }
-
-    const url = `${this.baseUrl}/rag_completion/`;
-    const data = {
-      message,
-      filters,
+      search_filters: JSON.stringify(searchFilters),
       search_limit: searchLimit,
-      rerank_limit: rerankLimit,
-      settings,
-      generation_config: generationConfig,
+      streaming,
+      rag_generation_config: JSON.stringify(generationConfig),
     };
 
-    const headers = {
-      accept: "application/json",
-      "Content-Type": "application/json",
-    };
-
-    await this.streamingRequest(url, data, (chunk) => {
-      // Handle the streaming response chunk
-      console.log(chunk);
-    });
-  }
-
-  async filteredDeletion(key: string, value: boolean | number | string): Promise<any> {
-    const url = `${this.baseUrl}/filtered_deletion/`;
-    const response: AxiosResponse = await axios.delete(url, {
-      params: { key, value },
-    });
-    return response.data;
-  }
-
-  async getLogs(): Promise<any> {
-    const url = `${this.baseUrl}/logs`;
-    const response: AxiosResponse = await axios.get(url);
-    return response.data;
-  }
-
-  async getLogsSummary(): Promise<any> {
-    const url = `${this.baseUrl}/logs_summary`;
-    const response: AxiosResponse = await axios.get(url);
-    return response.data;
-  }
-
-  async getUserIds(): Promise<any> {
-    const url = `${this.baseUrl}/get_user_ids/`;
-    const response: AxiosResponse = await axios.get(url);
-    return response.data;
-  }
-
-  async getUserDocuments(userId: string): Promise<any> {
-    const url = `${this.baseUrl}/get_user_documents/`;
-    const response: AxiosResponse = await axios.get(url, {
-      params: { user_id: userId },
-    });
-    return response.data;
-  }
-
-  async streamingRequest(
-    endpoint: string,
-    data: object,
-    onData: (value: string) => void,
-    onError?: (status: number) => void
-  ): Promise<void> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${endpoint}`, {
-        method: "POST",
+    if (streaming) {
+      const response = await fetch(url, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
-  
-      if (response.status !== 200) {
-        onError?.(response.status);
-        return;
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
       }
-  
-      if (!response.body) {
-        return;
+
+      const reader = response.body?.getReader();
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            while (true) {
+              if (reader) {
+                const { done, value } = await reader.read();
+                if (done) {
+                  controller.close();
+                  break;
+                }
+                controller.enqueue(value);
+              }
+            }
+          } catch (error) {
+            controller.error(error);
+          }
+        },
+      });
+
+      return stream;
+    } else {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
       }
-  
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-  
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        onData(decoder.decode(value));
-      }
-    } catch (error) {
-      console.error("Error fetching data", error);
-      onError?.(500);
+
+      return response.json();
     }
+  }
+
+  async delete(
+    keys: string[],
+    values: (boolean | number | string)[]
+  ): Promise<any> {
+    const url = `${this.baseUrl}/delete`;
+    const data = { keys, values };
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    return response.json();
+  }
+
+  async getLogs(logTypeFilter?: string): Promise<any> {
+    const params: Record<string, any> = {};
+    if (logTypeFilter) params.log_type_filter = logTypeFilter;
+
+    const queryString = createQueryString(params);
+    const url = `${this.baseUrl}/logs${queryString ? '?' + queryString : ''}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const logs = await response.json();
+
+    function parseLogs(logs: any) {
+      return logs.results.map((run: any) => {
+        const parsedEntries = run.entries.map((entry: any) => {
+          let parsedValue;
+          try {
+            parsedValue = JSON.parse(entry.value);
+          } catch (e) {
+            parsedValue = entry.value; // Keep as string if JSON parsing fails
+          }
+
+          // Format search results if present
+          if (entry.key === 'search_results' && Array.isArray(parsedValue)) {
+            parsedValue = parsedValue.map((result: any) => {
+              let parsedResult;
+              try {
+                parsedResult = JSON.parse(result);
+              } catch (e) {
+                parsedResult = result; // Keep as string if JSON parsing fails
+              }
+              return parsedResult;
+            });
+          }
+
+          return { key: entry.key, value: parsedValue };
+        });
+        return {
+          run_id: run.run_id,
+          run_type: run.run_type,
+          entries: parsedEntries,
+        };
+      });
+    }
+
+    return parseLogs(logs);
+  }
+
+  async getDocumentsInfo(
+    documentIds?: string[] | null,
+    userIds?: string[] | null
+  ): Promise<any> {
+    console.log(`${this.baseUrl}`);
+    const url = new URL(`${this.baseUrl}/documents_info`);
+    const params: any = {};
+
+    // if (documentIds) params.document_ids = documentIds.join(',');
+    // if (userIds) params.user_ids = userIds.join(',');
+    if (documentIds && Array.isArray(documentIds)) {
+      params.document_ids = documentIds.join(',');
+    }
+    if (userIds && Array.isArray(userIds)) {
+      params.user_ids = userIds.join(',');
+    }
+
+    // Append parameters to URL
+    Object.keys(params).forEach((key) =>
+      url.searchParams.append(key, params[key])
+    );
+
+    console.log('getting documents info from url = ', url.toString());
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    console.log('response = ', response);
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  }
+
+  async getAnalytics(
+    filterCriteria: Record<string, any>,
+    analysisTypes?: Record<string, any>
+  ): Promise<any> {
+    const url = `${this.baseUrl}/analytics`;
+    const data: Record<string, any> = {
+      filter_criteria: {
+        filters: filterCriteria,
+      },
+      analysis_types: {
+        analysis_types: analysisTypes,
+      },
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorMessage = await response.text();
+        throw new Error(
+          `Error occurred while calling analytics API. Status Code: ${response.status}, Error Message: ${errorMessage}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        throw new Error(
+          `Error occurred while calling analytics API. ${error.message}`
+        );
+      }
+      throw error;
+    }
+  }
+
+  async getUsersStats(userIds?: string[] | null): Promise<any> {
+    const params: Record<string, any> = {};
+    if (userIds) params.user_ids = userIds.join(',');
+
+    const queryString = createQueryString(params);
+    const url = `${this.baseUrl}/users_stats${queryString ? '?' + queryString : ''}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  }
+
+  async getAppSettings(): Promise<any> {
+    const url = `${this.baseUrl}/app_settings`;
+    const response = await fetch(url, {
+      method: 'GET',
+    });
+
+    console.log('getAppSettings response = ', response);
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    return response.json();
+  }
+
+  generateRunId() {
+    return uuidv4();
+  }
+
+  generateIdFromLabel(label: string) {
+    const NAMESPACE_DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+    return uuidv5(label, NAMESPACE_DNS);
   }
 }
