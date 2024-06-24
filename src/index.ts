@@ -1,2 +1,1 @@
-export { default as R2RClient } from './r2rClient';
-export { generateIdFromLabel } from './utils';
+export { R2RClient } from "./R2RClient";
