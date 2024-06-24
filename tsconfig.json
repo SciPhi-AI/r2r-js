@@ -10,7 +10,7 @@
     "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "*": ["src/*"]
+      "*": ["src/*", "__tests__/*"]
     }
   },
   "include": ["src/**/*", "__tests__/**/*"]

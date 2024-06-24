@@ -26,6 +26,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: List src directory
+        run: ls -R src
+
+      - name: TypeScript file list
+        run: npx tsc --listFiles
+
       - name: Build
         run: pnpm run build
 
