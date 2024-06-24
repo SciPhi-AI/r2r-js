@@ -32,31 +32,66 @@ npm install r2r-js
 Here's a basic example of how to use the R2R JavaScript client:
 
 ```javascript
-const { R2RClient } = require('r2r-js');
+import { R2RClient } from "r2r-js";
 
-const baseUrl = 'http://localhost:8000';
+const baseUrl = "http://localhost:8000";
 const client = new R2RClient(baseUrl);
 
 async function main() {
-  // Upload and process a file
-  const filePath = 'path/to/your/file.pdf';
-  const metadata = { tags: ['example', 'test'] };
-  const uploadResponse = await client.uploadAndProcessFile('document-id', filePath, metadata);
-  console.log('Upload response:', uploadResponse);
+  // Perform a health check
+  const healthCheck = await client.healthCheck();
+  console.log("Health check:", healthCheck);
+
+  // Ingest documents
+  const ingestRequest = {
+    texts: ["Sample text 1", "Sample text 2"],
+    metadatas: [{ source: "file1" }, { source: "file2" }],
+    ids: ["doc1", "doc2"],
+  };
+  const ingestResponse = await client.ingestDocuments(ingestRequest);
+  console.log("Ingest response:", ingestResponse);
 
   // Perform a search
-  const searchResponse = await client.search('your search query', 5);
-  console.log('Search response:', searchResponse);
+  const searchRequest = {
+    query: "your search query",
+    n_results: 5,
+  };
+  const searchResponse = await client.search(searchRequest);
+  console.log("Search response:", searchResponse);
 
   // Perform a RAG completion
-  const ragResponse = await client.ragCompletion('your query', 5);
-  console.log('RAG response:', ragResponse);
+  const ragRequest = {
+    query: "your query",
+    n_results: 5,
+  };
+  const ragResponse = await client.rag(ragRequest);
+  console.log("RAG response:", ragResponse);
 }
 
 main().catch((error) => console.error(error));
 ```
 
-For more detailed usage examples and API documentation, please refer to the [R2R JavaScript Client documentation](https://link-to-docs).
+For more detailed usage examples and API documentation, please refer to the [R2R documentation](https://r2r-docs.sciphi.ai/introduction).
+
+## Features
+
+The R2R JavaScript client supports various operations:
+
+- Health check
+- Update prompt
+- Ingest documents and files
+- Update documents and files
+- Search
+- RAG (Retrieval-Augmented Generation)
+- Delete documents
+- Retrieve logs
+- Get app settings
+- Analytics
+- Users overview
+- Documents overview
+- Document chunks
+
+Each feature is implemented as a method in the `R2RClient` class, allowing for easy integration with your application.
 
 ## Contributing
 
@@ -66,6 +101,6 @@ Contributions to the R2R JavaScript client are welcome! If you find any issues o
 
 The R2R JavaScript client is open-source software licensed under the [MIT License](https://opensource.org/licenses/MIT).
 
-## Acknowledgements
+## Contributing
 
-The R2R JavaScript client is built on top of the R2R framework developed by SciPhi-AI. We would like to thank the R2R community for their ongoing support and contributions.
+We welcome contributions of all sizes!

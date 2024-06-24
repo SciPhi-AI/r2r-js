@@ -1,0 +1,22 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DocumentType = void 0;
+var DocumentType;
+(function (DocumentType) {
+    DocumentType["CSV"] = "csv";
+    DocumentType["DOCX"] = "docx";
+    DocumentType["HTML"] = "html";
+    DocumentType["JSON"] = "json";
+    DocumentType["MD"] = "md";
+    DocumentType["PDF"] = "pdf";
+    DocumentType["PPTX"] = "pptx";
+    DocumentType["TXT"] = "txt";
+    DocumentType["XLSX"] = "xlsx";
+    DocumentType["GIF"] = "gif";
+    DocumentType["PNG"] = "png";
+    DocumentType["JPG"] = "jpg";
+    DocumentType["JPEG"] = "jpeg";
+    DocumentType["SVG"] = "svg";
+    DocumentType["MP3"] = "mp3";
+    DocumentType["MP4"] = "mp4";
+})(DocumentType || (exports.DocumentType = DocumentType = {}));
