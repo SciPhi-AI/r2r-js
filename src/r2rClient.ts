@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import FormData from "form-data";
 import posthog from "posthog-js";
+import { Readable } from "stream";
 
 import { feature } from "./feature";
 import {
@@ -12,10 +13,16 @@ import {
   R2RRAGRequest,
   R2RDeleteRequest,
   R2RAnalyticsRequest,
+  R2RUpdateFilesRequest,
   R2RUsersOverviewRequest,
   R2RDocumentsOverviewRequest,
   R2RDocumentChunksRequest,
   R2RLogsRequest,
+  FilterCriteria,
+  AnalysisTypes,
+  VectorSearchSettings,
+  KGSearchSettings,
+  GenerationConfig,
 } from "./models";
 
 export class r2rClient {
@@ -62,30 +69,45 @@ export class r2rClient {
 
   @feature("ingestFiles")
   async ingestFiles(
-    files: File[],
-    request: R2RIngestFilesRequest,
+    files: (File | { path: string; name: string })[],
+    options: {
+      metadatas?: Record<string, any>[];
+      document_ids?: string[];
+      user_ids?: (string | null)[];
+      versions?: string[];
+      skip_document_info?: boolean;
+    } = {},
   ): Promise<any> {
+    const request: R2RIngestFilesRequest = {
+      metadatas: options.metadatas || [],
+      document_ids: options.document_ids || [],
+      user_ids: options.user_ids || [],
+      versions: options.versions || [],
+      skip_document_info: options.skip_document_info || false,
+    };
+
     const formData = new FormData();
 
-    files.forEach((file) => {
-      formData.append("files", file);
+    files.forEach((file, index) => {
+      if ("path" in file) {
+        formData.append(`file${index}`, Readable.from([]), file.name);
+      } else {
+        formData.append(`file${index}`, file);
+      }
     });
 
     Object.entries(request).forEach(([key, value]) => {
-      formData.append(key, JSON.stringify(value));
+      if (value !== undefined && value.length > 0) {
+        formData.append(key, JSON.stringify(value));
+      }
     });
 
     const response = await this.axiosInstance.post("/ingest_files", formData, {
       headers: {
-        "Content-Type": "multipart/form-data",
+        ...formData.getHeaders(),
       },
-      transformRequest: [
-        (data, headers) => {
-          delete headers["Content-Type"];
-          return data;
-        },
-      ],
     });
+
     return response.data;
   }
 
@@ -100,44 +122,107 @@ export class r2rClient {
 
   @feature("updateFiles")
   async updateFiles(
-    files: File[],
-    documentIds: string[],
-    metadatas?: Record<string, any>[],
+    files: (File | { path: string; name: string })[],
+    options: {
+      document_ids: string[];
+      metadatas?: Record<string, any>[];
+    },
   ): Promise<any> {
+    const request: R2RUpdateFilesRequest = {
+      document_ids: options.document_ids,
+      metadatas: options.metadatas || [],
+    };
+
     const formData = new FormData();
 
-    files.forEach((file) => {
-      formData.append("files", file);
+    files.forEach((file, index) => {
+      if ("path" in file) {
+        // It's a file path object (for Node.js)
+        formData.append(`file${index}`, Readable.from([]), file.name);
+      } else {
+        // It's a File object (for browser)
+        formData.append(`file${index}`, file);
+      }
     });
 
-    formData.append("document_ids", JSON.stringify(documentIds));
-
-    if (metadatas) {
-      formData.append("metadatas", JSON.stringify(metadatas));
-    }
+    // Append request data to formData
+    Object.entries(request).forEach(([key, value]) => {
+      if (value !== undefined && value.length > 0) {
+        formData.append(key, JSON.stringify(value));
+      }
+    });
 
     const response = await this.axiosInstance.post("/update_files", formData, {
       headers: {
-        "Content-Type": "multipart/form-data",
+        ...formData.getHeaders(),
       },
-      transformRequest: [
-        (data, headers) => {
-          delete headers["Content-Type"];
-          return data;
-        },
-      ],
     });
+
     return response.data;
   }
 
   @feature("search")
-  async search(request: R2RSearchRequest): Promise<any> {
+  async search(
+    query: string,
+    use_vector_search?: boolean,
+    search_filters?: Record<string, any>,
+    search_limit?: number,
+    do_hybrid_search?: boolean,
+    use_kg_sarch?: boolean,
+    kg_agent_generation_config?: GenerationConfig,
+  ): Promise<any> {
+    const vector_search_settings: VectorSearchSettings = {
+      use_vector_search: use_vector_search || true,
+      search_filters: search_filters || {},
+      search_limit: search_limit || 10,
+      do_hybrid_search: do_hybrid_search || false,
+    };
+
+    const kg_search_settings: KGSearchSettings = {
+      use_kg: use_kg_sarch || false,
+      agent_generation_config: kg_agent_generation_config || null,
+    };
+
+    const request: R2RSearchRequest = {
+      query,
+      vector_search_settings,
+      kg_search_settings,
+    };
+
     const response = await this.axiosInstance.post("/search", request);
     return response.data;
   }
 
   @feature("rag")
-  async rag(request: R2RRAGRequest): Promise<any> {
+  async rag(
+    query: string,
+    use_vector_search?: boolean,
+    search_filters?: Record<string, any>,
+    search_limit?: number,
+    do_hybrid_search?: boolean,
+    use_kg_sarch?: boolean,
+    kg_agent_generation_config?: GenerationConfig,
+    rag_generation_config?: GenerationConfig,
+  ): Promise<any> {
+    const vector_search_settings: VectorSearchSettings = {
+      use_vector_search: use_vector_search || true,
+      search_filters: search_filters || {},
+      search_limit: search_limit || 10,
+      do_hybrid_search: do_hybrid_search || false,
+    };
+
+    const kg_search_settings: KGSearchSettings = {
+      use_kg: use_kg_sarch || false,
+      agent_generation_config: kg_agent_generation_config || null,
+    };
+
+    const request: R2RRAGRequest = {
+      query,
+      vector_search_settings,
+      kg_search_settings,
+      rag_generation_config,
+    };
+
     if (request.rag_generation_config?.stream) {
       return this.streamRag(request);
     } else {
@@ -162,7 +247,12 @@ export class r2rClient {
   }
 
   @feature("delete")
-  async delete(request: R2RDeleteRequest): Promise<any> {
+  async delete(keys: string[], values: any[]): Promise<any> {
+    const request: R2RDeleteRequest = {
+      keys,
+      values,
+    };
+
     const response = await this.axiosInstance({
       method: "delete",
       url: "/delete",
@@ -176,15 +266,16 @@ export class r2rClient {
   }
 
   @feature("logs")
-  async logs(request: R2RLogsRequest): Promise<any> {
-    const payload = {
-      ...request,
-      log_type_filter:
-        request.log_type_filter === undefined ? null : request.log_type_filter,
-      max_runs_requested: request.max_runs_requested || 100,
+  async logs(
+    log_type_filter?: string,
+    max_runs_requested: number = 100,
+  ): Promise<any> {
+    const request: R2RLogsRequest = {
+      log_type_filter,
+      max_runs_requested,
     };
 
-    const response = await this.axiosInstance.post("/logs", payload, {
+    const response = await this.axiosInstance.post("/logs", request, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -199,26 +290,43 @@ export class r2rClient {
   }
 
   @feature("analytics")
-  async analytics(request: R2RAnalyticsRequest): Promise<any> {
+  async analytics(
+    filter_criteria: FilterCriteria,
+    analysis_types: AnalysisTypes,
+  ): Promise<any> {
+    const request: R2RAnalyticsRequest = {
+      filter_criteria,
+      analysis_types,
+    };
+
     const response = await this.axiosInstance.post("/analytics", request, {
       headers: {
         "Content-Type": "application/json",
       },
     });
-    posthog.capture("TSClient", { requestType: "analytics success" });
     return response.data;
   }
 
   @feature("usersOverview")
-  async usersOverview(request: R2RUsersOverviewRequest): Promise<any> {
+  async usersOverview(user_ids?: string[]): Promise<any> {
+    const params: R2RUsersOverviewRequest = { user_ids };
+
     const response = await this.axiosInstance.get("/users_overview", {
-      params: request,
+      params,
     });
     return response.data;
   }
 
   @feature("documentsOverview")
-  async documentsOverview(request: R2RDocumentsOverviewRequest): Promise<any> {
+  async documentsOverview(
+    document_ids?: string[],
+    user_ids?: string[],
+  ): Promise<any> {
+    const request: R2RDocumentsOverviewRequest = {
+      document_ids,
+      user_ids,
+    };
+
     const response = await this.axiosInstance.post(
       "/documents_overview",
       request,
@@ -232,7 +340,11 @@ export class r2rClient {
   }
 
   @feature("documentChunks")
-  async documentChunks(request: R2RDocumentChunksRequest): Promise<any> {
+  async documentChunks(document_id: string): Promise<any> {
+    const request: R2RDocumentChunksRequest = {
+      document_id,
+    };
+
     const response = await this.axiosInstance.post(
       "/document_chunks",
       request,
