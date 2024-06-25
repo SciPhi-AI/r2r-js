@@ -278,14 +278,9 @@ export class r2rClient {
     max_runs_requested: number = 100,
   ): Promise<any> {
     const request: R2RLogsRequest = {
-      max_runs_requested,
+      log_type_filter: log_type_filter || null,
+      max_runs_requested: max_runs_requested,
     };
-
-    if (log_type_filter !== undefined) {
-      request.log_type_filter = log_type_filter;
-    }
-
-    console.log("Sending request:", JSON.stringify(request));
 
     const response = await this.axiosInstance.post("/logs", request, {
       headers: {
@@ -321,11 +316,14 @@ export class r2rClient {
 
   @feature("usersOverview")
   async usersOverview(user_ids?: string[]): Promise<any> {
-    const params: R2RUsersOverviewRequest =
-      user_ids && user_ids.length > 0 ? { user_ids } : {};
+    const request: R2RUsersOverviewRequest = {
+      user_ids: user_ids || [],
+    };
 
-    const response = await this.axiosInstance.get("/users_overview", {
-      params,
+    const response = await this.axiosInstance.post("/users_overview", request, {
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
     return response.data;
   }
@@ -336,8 +334,8 @@ export class r2rClient {
     user_ids?: string[],
   ): Promise<any> {
     const request: R2RDocumentsOverviewRequest = {
-      ...(document_ids && document_ids.length > 0 && { document_ids }),
-      ...(user_ids && user_ids.length > 0 && { user_ids }),
+      document_ids: document_ids || [],
+      user_ids: user_ids || [],
     };
 
     const response = await this.axiosInstance.post(
