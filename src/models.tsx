@@ -154,6 +154,6 @@ export interface R2RDocumentChunksRequest {
 }
 
 export interface R2RLogsRequest {
-  log_type_filter?: string;
+  log_type_filter?: string | null;
   max_runs_requested: number;
 }
