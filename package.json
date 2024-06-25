@@ -1,12 +1,12 @@
 {
   "name": "r2r-js",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "description": "",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./dist/*": "./dist/*"
+    ".": "./dist/src/index.js",
+    "./dist/src/*": "./dist/src/*"
   },
   "scripts": {
     "start": "ts-node src/index.ts",
