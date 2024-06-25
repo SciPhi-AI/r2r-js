@@ -112,7 +112,9 @@ export class r2rClient {
     });
 
     const response = await this.axiosInstance.post("/ingest_files", formData, {
-      headers: formData.getHeaders(),
+      headers: formData.getHeaders?.() ?? {
+        "Content-Type": "multipart/form-data",
+      },
       transformRequest: [
         (data, headers) => {
           delete headers["Content-Type"];
