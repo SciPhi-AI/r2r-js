@@ -83,36 +83,30 @@ export class r2rClient {
 
     files.forEach((file, index) => {
       if ("path" in file) {
+        // Node.js environments
         formData.append("files", fs.createReadStream(file.path), file.name);
       } else {
+        // Browser environments
         formData.append("files", file);
       }
     });
 
-    if (options.metadatas) {
-      formData.append("metadatas", JSON.stringify(options.metadatas));
-    }
-    if (options.document_ids) {
-      formData.append("document_ids", JSON.stringify(options.document_ids));
-    }
-    if (options.user_ids) {
-      formData.append("user_ids", JSON.stringify(options.user_ids));
-    }
-    if (options.versions) {
-      formData.append("versions", JSON.stringify(options.versions));
-    }
-    if (options.skip_document_info !== undefined) {
-      formData.append(
-        "skip_document_info",
-        JSON.stringify(options.skip_document_info),
-      );
-    }
+    const request: R2RIngestFilesRequest = {
+      metadatas: options.metadatas,
+      document_ids: options.document_ids,
+      user_ids: options.user_ids,
+      versions: options.versions,
+      skip_document_info: options.skip_document_info,
+    };
+
+    Object.entries(request).forEach(([key, value]) => {
+      if (value !== undefined) {
+        formData.append(key, JSON.stringify(value));
+      }
+    });
 
     const response = await this.axiosInstance.post("/ingest_files", formData, {
-      headers: {
-        ...formData.getHeaders(),
-        "Content-Type": `multipart/form-data; boundary=${formData.getBoundary()}`,
-      },
+      headers: formData.getHeaders(),
     });
 
     return response.data;
