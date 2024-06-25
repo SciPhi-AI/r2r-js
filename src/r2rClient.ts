@@ -70,7 +70,7 @@ export class r2rClient {
 
   @feature("ingestFiles")
   async ingestFiles(
-    files: (File | { path: string; name: string })[],
+    files: { path: string; name: string }[],
     options: {
       metadatas?: Record<string, any>[];
       document_ids?: string[];
@@ -81,14 +81,8 @@ export class r2rClient {
   ): Promise<any> {
     const formData = new FormData();
 
-    files.forEach((file, index) => {
-      if ("path" in file) {
-        // Node.js environments
-        formData.append("files", fs.createReadStream(file.path), file.name);
-      } else {
-        // Browser environments
-        formData.append("files", file);
-      }
+    files.forEach((file) => {
+      formData.append("files", fs.createReadStream(file.path), file.name);
     });
 
     const request: R2RIngestFilesRequest = {
