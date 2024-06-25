@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "target": "es6",
     "module": "commonjs",
     "outDir": "./dist",
@@ -9,12 +8,12 @@
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
-    "jsx": "preserve",
     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "*": ["src/*", "__tests__/*"]
-    }
+    "jsx": "react",
+    "lib": ["es6", "dom"],
+    "sourceMap": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "**/__tests__/*"]

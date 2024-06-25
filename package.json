@@ -1,16 +1,15 @@
 {
   "name": "r2r-js",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/src/index.js",
-    "./dist/src/*": "./dist/src/*"
+    ".": "./dist/index.js"
   },
   "scripts": {
-    "start": "ts-node src/index.ts",
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "prettier": "prettier --write .",
     "test": "jest",
     "test:watch": "jest --watch",
