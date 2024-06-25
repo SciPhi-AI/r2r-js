@@ -2,7 +2,11 @@ import axios, { AxiosInstance } from "axios";
 import FormData from "form-data";
 import posthog from "posthog-js";
 import { Readable } from "stream";
-import fs from "fs";
+
+let fs: any;
+if (typeof window === "undefined") {
+  fs = require("fs");
+}
 
 import { feature } from "./feature";
 import {
@@ -70,7 +74,7 @@ export class r2rClient {
 
   @feature("ingestFiles")
   async ingestFiles(
-    files: { path: string; name: string }[],
+    files: (File | { path: string; name: string })[],
     options: {
       metadatas?: Record<string, any>[];
       document_ids?: string[];
@@ -81,8 +85,18 @@ export class r2rClient {
   ): Promise<any> {
     const formData = new FormData();
 
-    files.forEach((file) => {
-      formData.append("files", fs.createReadStream(file.path), file.name);
+    files.forEach((file, index) => {
+      if ("path" in file) {
+        if (typeof window === "undefined") {
+          formData.append("files", fs.createReadStream(file.path), file.name);
+        } else {
+          console.warn(
+            "File path provided in browser environment. This is not supported.",
+          );
+        }
+      } else {
+        formData.append("files", file);
+      }
     });
 
     const request: R2RIngestFilesRequest = {
