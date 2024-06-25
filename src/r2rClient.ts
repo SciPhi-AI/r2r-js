@@ -18,7 +18,7 @@ import {
   R2RLogsRequest,
 } from "./models";
 
-export class R2RClient {
+export class r2rClient {
   private axiosInstance: AxiosInstance;
   private baseUrl: string;
 
@@ -247,4 +247,4 @@ export class R2RClient {
   }
 }
 
-export default R2RClient;
+export default r2rClient;
