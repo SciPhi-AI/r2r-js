@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from "axios";
 import FormData from "form-data";
 import posthog from "posthog-js";
 import { Readable } from "stream";
+import fs from "fs";
 
 import { feature } from "./feature";
 import {
@@ -78,33 +79,39 @@ export class r2rClient {
       skip_document_info?: boolean;
     } = {},
   ): Promise<any> {
-    const request: R2RIngestFilesRequest = {
-      metadatas: options.metadatas || [],
-      document_ids: options.document_ids || [],
-      user_ids: options.user_ids || [],
-      versions: options.versions || [],
-      skip_document_info: options.skip_document_info || false,
-    };
-
     const formData = new FormData();
 
     files.forEach((file, index) => {
       if ("path" in file) {
-        formData.append(`file${index}`, Readable.from([]), file.name);
+        formData.append("files", fs.createReadStream(file.path), file.name);
       } else {
-        formData.append(`file${index}`, file);
+        formData.append("files", file);
       }
     });
 
-    Object.entries(request).forEach(([key, value]) => {
-      if (value !== undefined && value.length > 0) {
-        formData.append(key, JSON.stringify(value));
-      }
-    });
+    if (options.metadatas) {
+      formData.append("metadatas", JSON.stringify(options.metadatas));
+    }
+    if (options.document_ids) {
+      formData.append("document_ids", JSON.stringify(options.document_ids));
+    }
+    if (options.user_ids) {
+      formData.append("user_ids", JSON.stringify(options.user_ids));
+    }
+    if (options.versions) {
+      formData.append("versions", JSON.stringify(options.versions));
+    }
+    if (options.skip_document_info !== undefined) {
+      formData.append(
+        "skip_document_info",
+        JSON.stringify(options.skip_document_info),
+      );
+    }
 
     const response = await this.axiosInstance.post("/ingest_files", formData, {
       headers: {
         ...formData.getHeaders(),
+        "Content-Type": `multipart/form-data; boundary=${formData.getBoundary()}`,
       },
     });
 
@@ -271,8 +278,8 @@ export class r2rClient {
     max_runs_requested: number = 100,
   ): Promise<any> {
     const request: R2RLogsRequest = {
-      log_type_filter,
       max_runs_requested,
+      ...(log_type_filter !== undefined && { log_type_filter }),
     };
 
     const response = await this.axiosInstance.post("/logs", request, {
@@ -309,7 +316,8 @@ export class r2rClient {
 
   @feature("usersOverview")
   async usersOverview(user_ids?: string[]): Promise<any> {
-    const params: R2RUsersOverviewRequest = { user_ids };
+    const params: R2RUsersOverviewRequest =
+      user_ids && user_ids.length > 0 ? { user_ids } : {};
 
     const response = await this.axiosInstance.get("/users_overview", {
       params,
@@ -323,8 +331,8 @@ export class r2rClient {
     user_ids?: string[],
   ): Promise<any> {
     const request: R2RDocumentsOverviewRequest = {
-      document_ids,
-      user_ids,
+      ...(document_ids && document_ids.length > 0 && { document_ids }),
+      ...(user_ids && user_ids.length > 0 && { user_ids }),
     };
 
     const response = await this.axiosInstance.post(
