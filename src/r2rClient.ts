@@ -104,11 +104,13 @@ export class r2rClient {
       document_ids: options.document_ids,
       user_ids: options.user_ids,
       versions: options.versions,
-      skip_document_info: options.skip_document_info,
+      skip_document_info: options.skip_document_info ?? false,
     };
 
     Object.entries(request).forEach(([key, value]) => {
-      formData.append(key, JSON.stringify(value));
+      if (value !== undefined) {
+        formData.append(key, JSON.stringify(value));
+      }
     });
 
     const response = await this.axiosInstance.post("/ingest_files", formData, {
