@@ -1,1 +1,1 @@
-export { R2RClient } from "./R2RClient";
+export { r2rClient } from "./r2rClient";
