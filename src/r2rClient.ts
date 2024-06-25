@@ -316,11 +316,13 @@ export class r2rClient {
 
   @feature("usersOverview")
   async usersOverview(user_ids?: string[]): Promise<any> {
-    const params: R2RUsersOverviewRequest =
+    const request: R2RUsersOverviewRequest =
       user_ids && user_ids.length > 0 ? { user_ids } : {};
 
-    const response = await this.axiosInstance.get("/users_overview", {
-      params,
+    const response = await this.axiosInstance.post("/users_overview", request, {
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
     return response.data;
   }
