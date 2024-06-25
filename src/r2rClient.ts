@@ -144,36 +144,43 @@ export class r2rClient {
       metadatas?: Record<string, any>[];
     },
   ): Promise<any> {
-    const request: R2RUpdateFilesRequest = {
-      document_ids: options.document_ids,
-      metadatas: options.metadatas || [],
-    };
-
     const formData = new FormData();
+
+    if (files.length !== options.document_ids.length) {
+      throw new Error("Each file must have a corresponding document ID.");
+    }
 
     files.forEach((file, index) => {
       if ("path" in file) {
-        // It's a file path object (for Node.js)
-        formData.append(`file${index}`, Readable.from([]), file.name);
+        if (typeof window === "undefined") {
+          formData.append(`files`, fs.createReadStream(file.path), file.name);
+        } else {
+          console.warn(
+            "File path provided in browser environment. This is not supported.",
+          );
+        }
       } else {
-        // It's a File object (for browser)
-        formData.append(`file${index}`, file);
+        formData.append(`files`, file);
       }
-    });
-
-    // Append request data to formData
-    Object.entries(request).forEach(([key, value]) => {
-      if (value !== undefined && value.length > 0) {
-        formData.append(key, JSON.stringify(value));
+      formData.append("document_ids", options.document_ids[index]);
+      if (options.metadatas && options.metadatas[index]) {
+        formData.append("metadatas", JSON.stringify(options.metadatas[index]));
+      } else {
+        formData.append("metadatas", "{}");
       }
     });
 
     const response = await this.axiosInstance.post("/update_files", formData, {
-      headers: {
-        ...formData.getHeaders(),
+      headers: formData.getHeaders?.() ?? {
+        "Content-Type": "multipart/form-data",
       },
+      transformRequest: [
+        (data, headers) => {
+          delete headers["Content-Type"];
+          return data;
+        },
+      ],
     });
-
     return response.data;
   }
 
