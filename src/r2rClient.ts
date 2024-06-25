@@ -94,15 +94,18 @@ export class r2rClient {
     };
 
     Object.entries(request).forEach(([key, value]) => {
-      if (value !== undefined) {
-        formData.append(key, JSON.stringify(value));
-      }
+      formData.append(key, JSON.stringify(value));
     });
 
     const response = await this.axiosInstance.post("/ingest_files", formData, {
       headers: formData.getHeaders(),
+      transformRequest: [
+        (data, headers) => {
+          delete headers["Content-Type"];
+          return data;
+        },
+      ],
     });
-
     return response.data;
   }
 
