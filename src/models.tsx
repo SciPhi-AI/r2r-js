@@ -141,12 +141,12 @@ export interface R2RAnalyticsRequest {
 }
 
 export interface R2RUsersOverviewRequest {
-  user_ids?: UUID[];
+  user_ids?: string[];
 }
 
 export interface R2RDocumentsOverviewRequest {
-  document_ids?: UUID[];
-  user_ids?: UUID[];
+  document_ids?: string[];
+  user_ids?: string[];
 }
 
 export interface R2RDocumentChunksRequest {
