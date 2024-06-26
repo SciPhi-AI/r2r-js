@@ -1,7 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import FormData from "form-data";
 import posthog from "posthog-js";
-import { Readable } from "stream";
 
 let fs: any;
 if (typeof window === "undefined") {
@@ -224,23 +223,23 @@ export class r2rClient {
   @feature("rag")
   async rag(
     query: string,
-    use_vector_search?: boolean,
-    search_filters?: Record<string, any>,
-    search_limit?: number,
-    do_hybrid_search?: boolean,
-    use_kg_sarch?: boolean,
+    use_vector_search: boolean = true,
+    search_filters: Record<string, any> = {},
+    search_limit: number = 10,
+    do_hybrid_search: boolean = false,
+    use_kg_search: boolean = false,
     kg_agent_generation_config?: GenerationConfig,
     rag_generation_config?: GenerationConfig,
   ): Promise<any> {
     const vector_search_settings: VectorSearchSettings = {
-      use_vector_search: use_vector_search || true,
-      search_filters: search_filters || {},
-      search_limit: search_limit || 10,
-      do_hybrid_search: do_hybrid_search || false,
+      use_vector_search,
+      search_filters,
+      search_limit,
+      do_hybrid_search,
     };
 
     const kg_search_settings: KGSearchSettings = {
-      use_kg: use_kg_sarch || false,
+      use_kg: use_kg_search,
       agent_generation_config: kg_agent_generation_config || null,
     };
 
@@ -254,10 +253,7 @@ export class r2rClient {
     if (request.rag_generation_config?.stream) {
       return this.streamRag(request);
     } else {
-      const response = await this.axiosInstance.post(
-        "/rag",
-        JSON.stringify(request),
-      );
+      const response = await this.axiosInstance.post("/rag", request);
       return response.data;
     }
   }
