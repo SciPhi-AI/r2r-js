@@ -7,7 +7,7 @@ if (typeof window === "undefined") {
   fs = require("fs");
 }
 
-import { feature } from "./feature";
+import { feature, initializeTelemetry } from "./feature";
 import {
   R2RUpdatePromptRequest,
   R2RIngestDocumentsRequest,
@@ -49,6 +49,8 @@ export class r2rClient {
         },
       ],
     });
+
+    initializeTelemetry();
   }
 
   async healthCheck(): Promise<any> {
