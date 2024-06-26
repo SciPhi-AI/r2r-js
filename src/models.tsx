@@ -1,26 +1,3 @@
-import { UUID } from "crypto";
-
-export enum DocumentType {
-  CSV = "csv",
-  DOCX = "docx",
-  HTML = "html",
-  JSON = "json",
-  MD = "md",
-  PDF = "pdf",
-  PPTX = "pptx",
-  TXT = "txt",
-  XLSX = "xlsx",
-  GIF = "gif",
-  PNG = "png",
-  JPG = "jpg",
-  JPEG = "jpeg",
-  SVG = "svg",
-  MP3 = "mp3",
-  MP4 = "mp4",
-}
-
-export type DataType = string | Uint8Array;
-
 export interface GenerationConfig {
   // RAG Configuration
   temperature?: number;
