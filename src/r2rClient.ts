@@ -162,11 +162,16 @@ export class r2rClient {
       } else {
         formData.append(`files`, file);
       }
-      formData.append("document_ids", options.document_ids[index]);
-      if (options.metadatas && options.metadatas[index]) {
-        formData.append("metadatas", JSON.stringify(options.metadatas[index]));
-      } else {
-        formData.append("metadatas", "{}");
+    });
+
+    const request: R2RUpdateFilesRequest = {
+      metadatas: options.metadatas,
+      document_ids: options.document_ids,
+    };
+
+    Object.entries(request).forEach(([key, value]) => {
+      if (value !== undefined) {
+        formData.append(key, JSON.stringify(value));
       }
     });
 
