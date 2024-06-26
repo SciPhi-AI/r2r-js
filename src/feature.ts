@@ -24,7 +24,6 @@ export function initializeTelemetry() {
       posthog = posthogJs.default;
       posthog.init(posthogApiKey, {
         api_host: posthogHost,
-        autocapture: false, // Disable autocapture for privacy
       });
 
       window.addEventListener("beforeunload", () => {
@@ -81,10 +80,10 @@ export function feature(operationName: string) {
     ): Promise<any> {
       try {
         const result = await originalMethod.apply(this, args);
-        captureEvent("OperationComplete", { operation: operationName });
+        captureEvent("TSClient", { operation: operationName });
         return result;
       } catch (error: unknown) {
-        captureEvent("OperationError", {
+        captureEvent("TSClient", {
           operation: operationName,
           errorMessage:
             error instanceof Error ? error.message : "Unknown error",

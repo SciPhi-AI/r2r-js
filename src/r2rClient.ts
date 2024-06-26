@@ -1,6 +1,5 @@
 import axios, { AxiosInstance } from "axios";
 import FormData from "form-data";
-import posthog from "posthog-js";
 
 let fs: any;
 if (typeof window === "undefined") {
@@ -384,7 +383,6 @@ export class r2rClient {
         },
       },
     );
-    posthog.capture("TSClient", { requestType: "documentChunks success" });
     return response.data;
   }
 }
