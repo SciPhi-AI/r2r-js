@@ -58,8 +58,28 @@ export class r2rClient {
   }
 
   @feature("updatePrompt")
-  async updatePrompt(request: R2RUpdatePromptRequest): Promise<any> {
-    const response = await this.axiosInstance.post("/update_prompt", request);
+  async updatePrompt(
+    name: string = "default_system",
+    template?: string,
+    input_types?: Record<string, string>,
+  ): Promise<Record<string, any>> {
+    const request: R2RUpdatePromptRequest = {
+      name: name,
+    };
+
+    if (template !== undefined) {
+      request.template = template;
+    }
+
+    if (input_types !== undefined) {
+      request.input_types = input_types;
+    }
+
+    const response = await this.axiosInstance.post("/update_prompt", request, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
     return response.data;
   }
 
