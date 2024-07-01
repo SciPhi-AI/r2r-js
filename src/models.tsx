@@ -40,6 +40,15 @@ export interface GenerationConfig {
   setKgMax_tokens_to_sample?: (value: number) => void;
 }
 
+export const DEFAULT_GENERATION_CONFIG: GenerationConfig = {
+  temperature: 0.1,
+  top_p: 1,
+  top_k: 100,
+  max_tokens_to_sample: 1024,
+  model: "gpt-4o",
+  stream: true,
+};
+
 export interface VectorSearchSettings {
   use_vector_search: boolean;
   search_filters?: Record<string, any>;

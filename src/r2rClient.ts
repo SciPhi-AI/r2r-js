@@ -26,6 +26,7 @@ import {
   VectorSearchSettings,
   KGSearchSettings,
   GenerationConfig,
+  DEFAULT_GENERATION_CONFIG,
 } from "./models";
 
 export class r2rClient {
@@ -249,8 +250,8 @@ export class r2rClient {
     search_limit: number = 10,
     do_hybrid_search: boolean = false,
     use_kg_search: boolean = false,
-    kg_agent_generation_config?: GenerationConfig,
-    rag_generation_config?: GenerationConfig,
+    kg_agent_generation_config?: Partial<GenerationConfig>,
+    rag_generation_config?: Partial<GenerationConfig>,
   ): Promise<any> {
     const vector_search_settings: VectorSearchSettings = {
       use_vector_search,
@@ -261,17 +262,24 @@ export class r2rClient {
 
     const kg_search_settings: KGSearchSettings = {
       use_kg: use_kg_search,
-      agent_generation_config: kg_agent_generation_config || null,
+      agent_generation_config: kg_agent_generation_config
+        ? { ...DEFAULT_GENERATION_CONFIG, ...kg_agent_generation_config }
+        : null,
+    };
+
+    const finalRagGenerationConfig: GenerationConfig = {
+      ...DEFAULT_GENERATION_CONFIG,
+      ...rag_generation_config,
     };
 
     const request: R2RRAGRequest = {
       query,
       vector_search_settings,
       kg_search_settings,
-      rag_generation_config,
+      rag_generation_config: finalRagGenerationConfig,
     };
 
-    if (request.rag_generation_config?.stream) {
+    if (finalRagGenerationConfig.stream) {
       return this.streamRag(request);
     } else {
       const response = await this.axiosInstance.post("/rag", request);
