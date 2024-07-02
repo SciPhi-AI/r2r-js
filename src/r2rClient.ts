@@ -253,6 +253,24 @@ export class r2rClient {
     kg_agent_generation_config?: Partial<GenerationConfig>,
     rag_generation_config?: Partial<GenerationConfig>,
   ): Promise<any> {
+    console.log(
+      "r2rClient.rag called with params:",
+      JSON.stringify(
+        {
+          query,
+          use_vector_search,
+          search_filters,
+          search_limit,
+          do_hybrid_search,
+          use_kg_search,
+          kg_agent_generation_config,
+          rag_generation_config,
+        },
+        null,
+        2,
+      ),
+    );
+
     const vector_search_settings: VectorSearchSettings = {
       use_vector_search,
       search_filters,
