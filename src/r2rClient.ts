@@ -217,7 +217,7 @@ export class r2rClient {
     search_filters?: Record<string, any>,
     search_limit?: number,
     do_hybrid_search?: boolean,
-    use_kg_sarch?: boolean,
+    use_kg_search?: boolean,
     kg_agent_generation_config?: GenerationConfig,
   ): Promise<any> {
     const vector_search_settings: VectorSearchSettings = {
@@ -228,8 +228,10 @@ export class r2rClient {
     };
 
     const kg_search_settings: KGSearchSettings = {
-      use_kg: use_kg_sarch || false,
-      agent_generation_config: kg_agent_generation_config || null,
+      use_kg_search: use_kg_search !== undefined ? use_kg_search : false,
+      agent_generation_config: kg_agent_generation_config
+        ? { ...DEFAULT_GENERATION_CONFIG, ...kg_agent_generation_config }
+        : undefined,
     };
 
     const request: R2RSearchRequest = {
@@ -261,29 +263,31 @@ export class r2rClient {
     };
 
     const kg_search_settings: KGSearchSettings = {
-      use_kg: use_kg_search,
+      use_kg_search,
       agent_generation_config: kg_agent_generation_config
         ? { ...DEFAULT_GENERATION_CONFIG, ...kg_agent_generation_config }
-        : null,
-    };
-
-    const finalRagGenerationConfig: GenerationConfig = {
-      ...DEFAULT_GENERATION_CONFIG,
-      ...rag_generation_config,
+        : undefined,
     };
 
     const request: R2RRAGRequest = {
       query,
       vector_search_settings,
       kg_search_settings,
-      rag_generation_config: finalRagGenerationConfig,
+      rag_generation_config: rag_generation_config
+        ? { ...DEFAULT_GENERATION_CONFIG, ...rag_generation_config }
+        : undefined,
     };
 
-    if (finalRagGenerationConfig.stream) {
+    if (rag_generation_config?.stream) {
       return this.streamRag(request);
     } else {
-      const response = await this.axiosInstance.post("/rag", request);
-      return response.data;
+      try {
+        const response = await this.axiosInstance.post("/rag", request);
+        return response.data;
+      } catch (error) {
+        console.error("Error in rag request:", error);
+        throw error;
+      }
     }
   }
 
