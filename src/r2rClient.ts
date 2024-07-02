@@ -291,6 +291,9 @@ export class r2rClient {
       },
     };
 
+    console.log("Sending RAG request:", JSON.stringify(request, null, 2));
+    console.log("Request headers:", this.axiosInstance.defaults.headers);
+
     if (request.rag_generation_config?.stream) {
       return this.streamRag(request);
     } else {
