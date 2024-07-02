@@ -278,7 +278,7 @@ export class r2rClient {
         : undefined,
     };
 
-    if (rag_generation_config?.stream) {
+    if (request.rag_generation_config?.stream) {
       return this.streamRag(request);
     } else {
       try {
