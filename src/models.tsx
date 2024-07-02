@@ -1,43 +1,18 @@
 export interface GenerationConfig {
-  // RAG Configuration
   temperature?: number;
-  setTemperature?: (value: number) => void;
   top_p?: number;
-  setTopP?: (value: number) => void;
   top_k?: number;
-  setTop_k?: (value: number) => void;
   max_tokens_to_sample?: number;
-  setMax_tokens_to_sample?: (value: number) => void;
   model?: string;
-  setModel?: (value: string) => void;
   stream?: boolean;
-  setStream?: (value: boolean) => void;
-  functions?: Array<Record<string, any>> | null;
-  setFunctions?: (value: Array<Record<string, any>> | null) => void;
+  functions?: Array<Record<string, any>>;
   skip_special_tokens?: boolean;
-  setSkipSpecialTokens?: (value: boolean) => void;
-  stop_token?: string | null;
-  setStopToken?: (value: string | null) => void;
+  stop_token?: string;
   num_beams?: number;
-  setNumBeams?: (value: number) => void;
   do_sample?: boolean;
-  setDoSample?: (value: boolean) => void;
   generate_with_chat?: boolean;
-  setGenerateWithChat?: (value: boolean) => void;
   add_generation_kwargs?: Record<string, any>;
-  setAddGenerationKwargs?: (value: Record<string, any>) => void;
-  api_base?: string | null;
-  setApiBase?: (value: string | null) => void;
-
-  // Knowledge Graph Configuration
-  kg_temperature?: number;
-  setKgTemperature?: (value: number) => void;
-  kg_top_p?: number;
-  setKgTopP?: (value: number) => void;
-  kg_top_k?: number;
-  setKgTop_k?: (value: number) => void;
-  kg_max_tokens_to_sample?: number;
-  setKgMax_tokens_to_sample?: (value: number) => void;
+  api_base?: string;
 }
 
 export const DEFAULT_GENERATION_CONFIG: GenerationConfig = {
@@ -57,8 +32,8 @@ export interface VectorSearchSettings {
 }
 
 export interface KGSearchSettings {
-  use_kg: boolean;
-  agent_generation_config?: GenerationConfig | null;
+  use_kg_search: boolean;
+  agent_generation_config?: GenerationConfig;
 }
 
 export interface Document {
@@ -103,9 +78,9 @@ export interface R2RSearchRequest {
 
 export interface R2RRAGRequest {
   query: string;
-  vector_search_settings: VectorSearchSettings;
-  kg_search_settings: KGSearchSettings;
-  rag_generation_config?: GenerationConfig | null;
+  vector_search_settings?: VectorSearchSettings;
+  kg_search_settings?: KGSearchSettings;
+  rag_generation_config?: GenerationConfig;
 }
 
 export interface R2RDeleteRequest {
