@@ -275,9 +275,10 @@ export class r2rClient {
 
     const kg_search_settings: KGSearchSettings = {
       use_kg_search,
-      agent_generation_config: use_kg_search
-        ? { ...DEFAULT_GENERATION_CONFIG, ...kg_generation_config }
-        : undefined,
+      agent_generation_config: {
+        ...DEFAULT_GENERATION_CONFIG,
+        ...kg_generation_config,
+      },
     };
 
     const request: R2RRAGRequest = {
@@ -304,14 +305,10 @@ export class r2rClient {
   }
 
   @feature("streamingRag")
-  private async streamRag(request: R2RRAGRequest): Promise<any> {
-    const response = await this.axiosInstance.post(
-      "/rag",
-      JSON.stringify(request),
-      {
-        responseType: "stream",
-      },
-    );
+  private async streamRag(request: R2RRAGRequest): Promise<ReadableStream> {
+    const response = await this.axiosInstance.post("/rag", request, {
+      responseType: "stream",
+    });
     return response.data;
   }
 
