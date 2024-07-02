@@ -78,8 +78,8 @@ export interface R2RSearchRequest {
 
 export interface R2RRAGRequest {
   query: string;
-  vector_search_settings?: VectorSearchSettings;
-  kg_search_settings?: KGSearchSettings;
+  vector_search_settings: VectorSearchSettings;
+  kg_search_settings: KGSearchSettings;
   rag_generation_config?: GenerationConfig;
 }
 

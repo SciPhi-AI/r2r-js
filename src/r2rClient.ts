@@ -245,16 +245,27 @@ export class r2rClient {
   }
 
   @feature("rag")
-  async rag(
-    query: string,
-    use_vector_search: boolean = true,
-    search_filters: Record<string, any> = {},
-    search_limit: number = 10,
-    do_hybrid_search: boolean = false,
-    use_kg_search: boolean = false,
-    kg_agent_generation_config?: Partial<GenerationConfig>,
-    rag_generation_config?: Partial<GenerationConfig>,
-  ): Promise<any> {
+  async rag(params: {
+    query: string;
+    use_vector_search?: boolean;
+    search_filters?: Record<string, any>;
+    search_limit?: number;
+    do_hybrid_search?: boolean;
+    use_kg_search?: boolean;
+    kg_generation_config?: Partial<GenerationConfig>;
+    rag_generation_config?: Partial<GenerationConfig>;
+  }): Promise<any> {
+    const {
+      query,
+      use_vector_search = true,
+      search_filters = {},
+      search_limit = 10,
+      do_hybrid_search = false,
+      use_kg_search = false,
+      kg_generation_config = {},
+      rag_generation_config = {},
+    } = params;
+
     const vector_search_settings: VectorSearchSettings = {
       use_vector_search,
       search_filters,
@@ -264,8 +275,8 @@ export class r2rClient {
 
     const kg_search_settings: KGSearchSettings = {
       use_kg_search,
-      agent_generation_config: kg_agent_generation_config
-        ? { ...DEFAULT_GENERATION_CONFIG, ...kg_agent_generation_config }
+      agent_generation_config: use_kg_search
+        ? { ...DEFAULT_GENERATION_CONFIG, ...kg_generation_config }
         : undefined,
     };
 
@@ -273,9 +284,10 @@ export class r2rClient {
       query,
       vector_search_settings,
       kg_search_settings,
-      rag_generation_config: rag_generation_config
-        ? { ...DEFAULT_GENERATION_CONFIG, ...rag_generation_config }
-        : undefined,
+      rag_generation_config: {
+        ...DEFAULT_GENERATION_CONFIG,
+        ...rag_generation_config,
+      },
     };
 
     if (request.rag_generation_config?.stream) {
