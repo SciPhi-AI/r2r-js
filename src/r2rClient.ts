@@ -295,31 +295,24 @@ export class r2rClient {
     console.log("Request headers:", this.axiosInstance.defaults.headers);
 
       
-    private async streamRag(
-      request: R2RRAGRequest
-    ): Promise<ReadableStream<Uint8Array> | null> {
-      const response = await fetch(`${this.baseUrl}/rag`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add any other headers you need, like authentication
-        },
-        body: JSON.stringify(request),
-      });
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
-      return response.body;
   }
 
   @feature("streamingRag")
-  private async streamRag(request: R2RRAGRequest): Promise<ReadableStream> {
-    const response = await this.axiosInstance.post("/rag", request, {
-      responseType: "stream",
+  private async streamRag(request: R2RRAGRequest): Promise<ReadableStream<Uint8Array> | null> {
+    const response = await fetch(`${this.baseUrl}/rag`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add any other headers you need, like authentication
+      },
+      body: JSON.stringify(request),
     });
-    return response.data;
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.body;
   }
 
   @feature("delete")
