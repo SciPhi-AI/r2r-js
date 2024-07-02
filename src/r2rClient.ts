@@ -289,13 +289,9 @@ export class r2rClient {
 
   @feature("streamingRag")
   private async streamRag(request: R2RRAGRequest): Promise<any> {
-    const response = await this.axiosInstance.post(
-      "/rag",
-      JSON.stringify(request),
-      {
-        responseType: "stream",
-      },
-    );
+    const response = await this.axiosInstance.post("/rag", request, {
+      responseType: "stream",
+    });
     return response.data;
   }
 
