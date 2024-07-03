@@ -34,8 +34,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Wait for R2R server to start
-        run: sleep 10
+      - name: Check if R2R server is running
+        run: |
+          sleep 10
+          curl http://localhost:8000/health || echo "Server not responding"
 
       - name: Run integration tests
         run: npm run test
