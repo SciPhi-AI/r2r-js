@@ -15,8 +15,8 @@ describe("r2rClient Integration Tests", () => {
 
   test("Ingest files", async () => {
     const files = [
-      { path: "__tests__/data/raskolnikov.txt", name: "raskolnikov.txt" },
-      { path: "__tests__/data/karamozov.txt", name: "karamozov.txt" },
+      { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
+      { path: "examples/data/karamozov.txt", name: "karamozov.txt" },
     ];
     await expect(
       client.ingestFiles(files, {
@@ -32,7 +32,7 @@ describe("r2rClient Integration Tests", () => {
 
   test("Update files", async () => {
     const updated_file = [
-      { path: "__tests__/data/myshkin.txt", name: "myshkin.txt" },
+      { path: "examples/data/myshkin.txt", name: "myshkin.txt" },
     ];
     await expect(
       client.updateFiles(updated_file, {
