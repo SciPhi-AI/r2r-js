@@ -1,4 +1,6 @@
 import { r2rClient } from "../src/index";
+import { FilterCriteria, AnalysisTypes } from "../src/models";
+const fs = require("fs");
 
 const baseUrl = "http://localhost:8000";
 
@@ -13,10 +15,37 @@ describe("r2rClient Integration Tests", () => {
     await expect(client.healthCheck()).resolves.not.toThrow();
   });
 
+  test("Ingest documents", async () => {
+    const documentsToIngest = [
+      {
+        type: "txt",
+        data: fs.readFileSync("examples/data/myshkin.txt", "utf8"),
+        metadata: { title: "myshkin.txt" },
+      },
+    ];
+    await expect(
+      client.ingestDocuments(documentsToIngest),
+    ).resolves.not.toThrow();
+  });
+
+  test("Update documents", async () => {
+    const documentsToUpdate = [
+      {
+        id: "4430ddbf-4323-5a14-9205-c092920e9321",
+        type: "txt",
+        data: fs.readFileSync("examples/data/raskolnikov.txt", "utf8"),
+        metadata: { title: "updated_myshkin.txt" },
+      },
+    ];
+    await expect(
+      client.updateDocuments(documentsToUpdate),
+    ).resolves.not.toThrow();
+  });
+
   test("Ingest files", async () => {
     const files = [
-      { path: "__tests__/data/raskolnikov.txt", name: "raskolnikov.txt" },
-      { path: "__tests__/data/karamozov.txt", name: "karamozov.txt" },
+      { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
+      { path: "examples/data/karamozov.txt", name: "karamozov.txt" },
     ];
     await expect(
       client.ingestFiles(files, {
@@ -32,12 +61,12 @@ describe("r2rClient Integration Tests", () => {
 
   test("Update files", async () => {
     const updated_file = [
-      { path: "__tests__/data/myshkin.txt", name: "myshkin.txt" },
+      { path: "examples/data/myshkin.txt", name: "myshkin.txt" },
     ];
     await expect(
       client.updateFiles(updated_file, {
         document_ids: ["48e29904-3010-54fe-abe5-a4f3fba59110"],
-        metadatas: [{ title: "myshkin.txt" }],
+        metadatas: [{ title: "updated_karamozov.txt" }],
       }),
     ).resolves.not.toThrow();
   });
@@ -64,19 +93,23 @@ describe("r2rClient Integration Tests", () => {
     await expect(client.appSettings()).resolves.not.toThrow();
   });
 
-  // test('Get analytics', async () => {
-  //   const filterCriteria = {
-  //     filters: {
-  //       "search_latencies": "search_latency"
-  //     }
-  //   };
+  test("Get analytics", async () => {
+    const filterCriteria: FilterCriteria = {
+      filters: {
+        search_latencies: "search_latency",
+      },
+    };
 
-  //   const analysisTypes = {
-  //     "search_latencies": ["basic_statistics", "search_latency"]
-  //   };
+    const analysisTypes: AnalysisTypes = {
+      analysis_types: {
+        search_latencies: ["basic_statistics", "search_latency"],
+      },
+    };
 
-  //   await expect(client.analytics(filterCriteria, analysisTypes)).resolves.not.toThrow();
-  // });
+    await expect(
+      client.analytics(filterCriteria, analysisTypes),
+    ).resolves.not.toThrow();
+  });
 
   test("Get users overview", async () => {
     await expect(client.usersOverview()).resolves.not.toThrow();
@@ -95,8 +128,11 @@ describe("r2rClient Integration Tests", () => {
   afterAll(async () => {
     // Clean up
     await client.delete(
-      ["document_id"],
-      ["48e29904-3010-54fe-abe5-a4f3fba59110"],
+      ["document_id", "document_id"],
+      [
+        "48e29904-3010-54fe-abe5-a4f3fba59110",
+        "4430ddbf-4323-5a14-9205-c092920e9321",
+      ],
     );
   });
 });

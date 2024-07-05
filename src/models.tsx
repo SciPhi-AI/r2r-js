@@ -37,7 +37,10 @@ export interface KGSearchSettings {
 }
 
 export interface Document {
-  // Define the properties of Document
+  id?: string;
+  type: string;
+  data: string;
+  metadata: Record<string, any>;
 }
 
 export interface R2RUpdatePromptRequest {
@@ -53,8 +56,8 @@ export interface R2RIngestDocumentsRequest {
 
 export interface R2RUpdateDocumentsRequest {
   documents: Document[];
-  versions?: string[];
-  metadatas?: Record<string, any>[];
+  versions?: string[] | null;
+  metadatas?: Record<string, any>[] | null;
 }
 
 export interface R2RIngestFilesRequest {
