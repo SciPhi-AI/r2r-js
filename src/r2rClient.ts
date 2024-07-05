@@ -8,6 +8,7 @@ if (typeof window === "undefined") {
 
 import { feature, initializeTelemetry } from "./feature";
 import {
+  Document,
   R2RUpdatePromptRequest,
   R2RIngestDocumentsRequest,
   R2RIngestFilesRequest,
@@ -85,7 +86,22 @@ export class r2rClient {
   }
 
   @feature("ingestDocuments")
-  async ingestDocuments(request: R2RIngestDocumentsRequest): Promise<any> {
+  async ingestDocuments(
+    documents: Document[],
+    versions?: string[],
+  ): Promise<any> {
+    const processedDocuments = documents.map((doc) => ({
+      type: doc.type,
+      data: Buffer.from(doc.data).toString("base64"),
+      metadata: doc.metadata,
+      ...(doc.id && { id: doc.id }),
+    }));
+
+    const request: R2RIngestDocumentsRequest = {
+      documents: processedDocuments,
+      ...(versions && { versions }),
+    };
+
     const response = await this.axiosInstance.post(
       "/ingest_documents",
       request,
@@ -149,7 +165,31 @@ export class r2rClient {
   }
 
   @feature("updateDocuments")
-  async updateDocuments(request: R2RUpdateDocumentsRequest): Promise<any> {
+  async updateDocuments(
+    documents: Document[],
+    versions?: string[] | null,
+    metadatas?: Record<string, any>[] | null,
+  ): Promise<any> {
+    const processedDocuments = documents.map((doc) => ({
+      id: doc.id,
+      type: doc.type,
+      data: Buffer.from(doc.data).toString("base64"),
+      metadata: doc.metadata,
+    }));
+
+    const request: R2RUpdateDocumentsRequest = {
+      documents: processedDocuments,
+    };
+
+    // Only include versions and metadatas if they're explicitly provided
+    if (versions !== undefined && versions !== null) {
+      request.versions = versions;
+    }
+
+    if (metadatas !== undefined && metadatas !== null) {
+      request.metadatas = metadatas;
+    }
+
     const response = await this.axiosInstance.post(
       "/update_documents",
       request,
