@@ -49,17 +49,6 @@ export interface R2RUpdatePromptRequest {
   input_types?: Record<string, string>;
 }
 
-export interface R2RIngestDocumentsRequest {
-  documents: Document[];
-  versions?: string[];
-}
-
-export interface R2RUpdateDocumentsRequest {
-  documents: Document[];
-  versions?: string[] | null;
-  metadatas?: Record<string, any>[] | null;
-}
-
 export interface R2RIngestFilesRequest {
   metadatas?: Record<string, any>[];
   document_ids?: string[];
