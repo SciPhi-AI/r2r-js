@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import FormData from "form-data";
+import * as path from "path";
 
 let fs: any;
 if (typeof window === "undefined") {
@@ -10,9 +11,7 @@ import { feature, initializeTelemetry } from "./feature";
 import {
   Document,
   R2RUpdatePromptRequest,
-  R2RIngestDocumentsRequest,
   R2RIngestFilesRequest,
-  R2RUpdateDocumentsRequest,
   R2RSearchRequest,
   R2RRAGRequest,
   R2RDeleteRequest,
@@ -85,33 +84,9 @@ export class r2rClient {
     return response.data;
   }
 
-  @feature("ingestDocuments")
-  async ingestDocuments(
-    documents: Document[],
-    versions?: string[],
-  ): Promise<any> {
-    const processedDocuments = documents.map((doc) => ({
-      type: doc.type,
-      data: Buffer.from(doc.data).toString("base64"),
-      metadata: doc.metadata,
-      ...(doc.id && { id: doc.id }),
-    }));
-
-    const request: R2RIngestDocumentsRequest = {
-      documents: processedDocuments,
-      ...(versions && { versions }),
-    };
-
-    const response = await this.axiosInstance.post(
-      "/ingest_documents",
-      request,
-    );
-    return response.data;
-  }
-
   @feature("ingestFiles")
   async ingestFiles(
-    files: (File | { path: string; name: string })[],
+    files: (string | File | { path: string; name: string })[],
     options: {
       metadatas?: Record<string, any>[];
       document_ids?: string[];
@@ -122,19 +97,48 @@ export class r2rClient {
   ): Promise<any> {
     const formData = new FormData();
 
-    files.forEach((file, index) => {
-      if ("path" in file) {
+    const processPath = async (
+      path: string | File | { path: string; name: string },
+      index: number,
+    ) => {
+      if (typeof path === "string") {
         if (typeof window === "undefined") {
-          formData.append("files", fs.createReadStream(file.path), file.name);
+          const stat = await fs.promises.stat(path);
+          if (stat.isDirectory()) {
+            const files = await fs.promises.readdir(path, {
+              withFileTypes: true,
+            });
+            for (const file of files) {
+              await processPath(`${path}/${file.name}`, index);
+            }
+          } else {
+            formData.append(
+              "files",
+              fs.createReadStream(path),
+              path.split("/").pop(),
+            );
+          }
+        } else {
+          console.warn(
+            "File or folder path provided in browser environment. This is not supported.",
+          );
+        }
+      } else if (path instanceof File) {
+        formData.append("files", path);
+      } else if ("path" in path) {
+        if (typeof window === "undefined") {
+          formData.append("files", fs.createReadStream(path.path), path.name);
         } else {
           console.warn(
             "File path provided in browser environment. This is not supported.",
           );
         }
-      } else {
-        formData.append("files", file);
       }
-    });
+    };
+
+    for (let i = 0; i < files.length; i++) {
+      await processPath(files[i], i);
+    }
 
     const request: R2RIngestFilesRequest = {
       metadatas: options.metadatas,
@@ -161,39 +165,6 @@ export class r2rClient {
         },
       ],
     });
-    return response.data;
-  }
-
-  @feature("updateDocuments")
-  async updateDocuments(
-    documents: Document[],
-    versions?: string[] | null,
-    metadatas?: Record<string, any>[] | null,
-  ): Promise<any> {
-    const processedDocuments = documents.map((doc) => ({
-      id: doc.id,
-      type: doc.type,
-      data: Buffer.from(doc.data).toString("base64"),
-      metadata: doc.metadata,
-    }));
-
-    const request: R2RUpdateDocumentsRequest = {
-      documents: processedDocuments,
-    };
-
-    // Only include versions and metadatas if they're explicitly provided
-    if (versions !== undefined && versions !== null) {
-      request.versions = versions;
-    }
-
-    if (metadatas !== undefined && metadatas !== null) {
-      request.metadatas = metadatas;
-    }
-
-    const response = await this.axiosInstance.post(
-      "/update_documents",
-      request,
-    );
     return response.data;
   }
 

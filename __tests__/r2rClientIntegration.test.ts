@@ -15,53 +15,29 @@ describe("r2rClient Integration Tests", () => {
     await expect(client.healthCheck()).resolves.not.toThrow();
   });
 
-  test("Ingest documents", async () => {
-    const documentsToIngest = [
-      {
-        type: "txt",
-        data: fs.readFileSync("examples/data/myshkin.txt", "utf8"),
-        metadata: { title: "myshkin.txt" },
-      },
-    ];
-    await expect(
-      client.ingestDocuments(documentsToIngest),
-    ).resolves.not.toThrow();
-  });
-
-  test("Update documents", async () => {
-    const documentsToUpdate = [
-      {
-        id: "4430ddbf-4323-5a14-9205-c092920e9321",
-        type: "txt",
-        data: fs.readFileSync("examples/data/raskolnikov.txt", "utf8"),
-        metadata: { title: "updated_myshkin.txt" },
-      },
-    ];
-    await expect(
-      client.updateDocuments(documentsToUpdate),
-    ).resolves.not.toThrow();
-  });
-
-  test("Ingest files", async () => {
+  test("Ingest file", async () => {
     const files = [
       { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
-      { path: "examples/data/karamozov.txt", name: "karamozov.txt" },
     ];
+
     await expect(
       client.ingestFiles(files, {
         metadatas: [{ title: "raskolnikov.txt" }, { title: "karamozov.txt" }],
-        user_ids: [
-          "123e4567-e89b-12d3-a456-426614174000",
-          "123e4567-e89b-12d3-a456-426614174000",
-        ],
+        user_ids: ["123e4567-e89b-12d3-a456-426614174000"],
         skip_document_info: false,
       }),
     ).resolves.not.toThrow();
   });
 
+  test("Ingest files in folder", async () => {
+    const files = ["examples/data/folder"];
+
+    await expect(client.ingestFiles(files)).resolves.not.toThrow();
+  });
+
   test("Update files", async () => {
     const updated_file = [
-      { path: "examples/data/myshkin.txt", name: "myshkin.txt" },
+      { path: "examples/data/folder/myshkin.txt", name: "myshkin.txt" },
     ];
     await expect(
       client.updateFiles(updated_file, {
@@ -131,7 +107,7 @@ describe("r2rClient Integration Tests", () => {
       ["document_id", "document_id"],
       [
         "48e29904-3010-54fe-abe5-a4f3fba59110",
-        "4430ddbf-4323-5a14-9205-c092920e9321",
+        "102e815f-3998-5373-8d7d-a07795266ed6",
       ],
     );
   });
