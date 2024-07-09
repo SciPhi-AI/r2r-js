@@ -264,7 +264,7 @@ export class r2rClient {
     do_hybrid_search?: boolean;
     use_kg_search?: boolean;
     kg_generation_config?: Record<string, any>;
-    rag_generation_config?: Record<string, any>; // Updated to Record<string, any>
+    rag_generation_config?: Record<string, any>;
   }): Promise<any> {
     const {
       query,
