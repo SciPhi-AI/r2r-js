@@ -33,7 +33,7 @@ export interface VectorSearchSettings {
 
 export interface KGSearchSettings {
   use_kg_search: boolean;
-  agent_generation_config?: GenerationConfig;
+  agent_generation_config?: Record<string, any>;
 }
 
 export interface Document {
@@ -70,9 +70,9 @@ export interface R2RSearchRequest {
 
 export interface R2RRAGRequest {
   query: string;
-  vector_search_settings: VectorSearchSettings;
-  kg_search_settings: KGSearchSettings;
-  rag_generation_config?: GenerationConfig;
+  vector_search_settings: Record<string, any>;
+  kg_search_settings: Record<string, any>;
+  rag_generation_config?: Record<string, any>;
 }
 
 export interface R2RDeleteRequest {
