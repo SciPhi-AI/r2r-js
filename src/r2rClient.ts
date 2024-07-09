@@ -263,8 +263,8 @@ export class r2rClient {
     search_limit?: number;
     do_hybrid_search?: boolean;
     use_kg_search?: boolean;
-    kg_generation_config?: Partial<GenerationConfig>;
-    rag_generation_config?: Partial<GenerationConfig>;
+    kg_generation_config?: Record<string, any>;
+    rag_generation_config?: Record<string, any>; // Updated to Record<string, any>
   }): Promise<any> {
     const {
       query,
@@ -277,14 +277,14 @@ export class r2rClient {
       rag_generation_config = {},
     } = params;
 
-    const vector_search_settings: VectorSearchSettings = {
+    const vector_search_settings: Record<string, any> = {
       use_vector_search,
       search_filters,
       search_limit,
       do_hybrid_search,
     };
 
-    const kg_search_settings: KGSearchSettings = {
+    const kg_search_settings: Record<string, any> = {
       use_kg_search,
       agent_generation_config: {
         ...DEFAULT_GENERATION_CONFIG,
@@ -302,7 +302,7 @@ export class r2rClient {
       },
     };
 
-    if (rag_generation_config.stream) {
+    if (rag_generation_config && rag_generation_config.stream) {
       return this.streamRag(request);
     } else {
       const response = await this.axiosInstance.post("/rag", request);
