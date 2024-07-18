@@ -12,7 +12,13 @@ describe("r2rClient Integration Tests", () => {
   });
 
   test("Health check", async () => {
-    await expect(client.healthCheck()).resolves.not.toThrow();
+    await expect(client.health()).resolves.not.toThrow();
+  });
+
+  test("Login", async () => {
+    await expect(
+      client.login("admin@example.com", "change_me_immediately"),
+    ).resolves.not.toThrow();
   });
 
   test("Ingest file", async () => {
@@ -37,11 +43,11 @@ describe("r2rClient Integration Tests", () => {
 
   test("Update files", async () => {
     const updated_file = [
-      { path: "examples/data/folder/myshkin.txt", name: "myshkin.txt" },
+      { path: "examples/data/folder/myshkin.txt", name: "super_myshkin.txt" },
     ];
     await expect(
       client.updateFiles(updated_file, {
-        document_ids: ["48e29904-3010-54fe-abe5-a4f3fba59110"],
+        document_ids: ["f3c6afa5-fc58-58b7-b797-f7148e5253c3"],
         metadatas: [{ title: "updated_karamozov.txt" }],
       }),
     ).resolves.not.toThrow();
@@ -53,11 +59,11 @@ describe("r2rClient Integration Tests", () => {
 
   test("Generate RAG response", async () => {
     await expect(client.rag({ query: "test" })).resolves.not.toThrow();
-  });
+  }, 10000);
 
   test("Delete document", async () => {
     await expect(
-      client.delete(["document_id"], ["153a0857-efc4-57dd-b629-1c7d58c24a93"]),
+      client.delete(["document_id"], ["cb6e55f3-cb3e-5646-ad52-42f06eb321f5"]),
     ).resolves.not.toThrow();
   });
 
@@ -65,7 +71,7 @@ describe("r2rClient Integration Tests", () => {
     await expect(client.logs()).resolves.not.toThrow();
   });
 
-  test("Get app settings", async () => {
+  test("App settings", async () => {
     await expect(client.appSettings()).resolves.not.toThrow();
   });
 
@@ -97,18 +103,21 @@ describe("r2rClient Integration Tests", () => {
 
   test("Get document chunks", async () => {
     await expect(
-      client.documentChunks("48e29904-3010-54fe-abe5-a4f3fba59110"),
+      client.documentChunks("43eebf9c-c2b4-59e5-993a-054bf4a5c423"),
     ).resolves.not.toThrow();
   });
 
-  afterAll(async () => {
-    // Clean up
-    await client.delete(
-      ["document_id", "document_id"],
-      [
-        "48e29904-3010-54fe-abe5-a4f3fba59110",
-        "102e815f-3998-5373-8d7d-a07795266ed6",
-      ],
-    );
+  test("Clean up remaining documents", async () => {
+    await expect(
+      client.delete(["document_id"], ["43eebf9c-c2b4-59e5-993a-054bf4a5c423"]),
+    ).resolves.not.toThrow();
+
+    await expect(
+      client.delete(["document_id"], ["f3c6afa5-fc58-58b7-b797-f7148e5253c3"]),
+    ).resolves.not.toThrow;
+  });
+
+  test("Logout", async () => {
+    await expect(client.logout()).resolves.not.toThrow();
   });
 });

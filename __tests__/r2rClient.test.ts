@@ -9,8 +9,8 @@ describe("R2RClient", () => {
 
   beforeEach(() => {
     mockAxiosInstance = {
-      get: jest.fn(),
       post: jest.fn(),
+      request: jest.fn(),
       defaults: { baseURL: "http://0.0.0.0:8000/v1" },
     };
 
@@ -26,13 +26,18 @@ describe("R2RClient", () => {
       );
     });
 
-    test("healthCheck should return data from the /health endpoint", async () => {
+    test("health should return data from the /health endpoint", async () => {
       const mockResponse = { response: "ok" };
-      mockAxiosInstance.get.mockResolvedValue({ data: mockResponse });
+      mockAxiosInstance.request.mockResolvedValue({ data: mockResponse });
 
-      const result = await client.healthCheck();
+      const result = await client.health();
       expect(result).toEqual(mockResponse);
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith("/health");
+      expect(mockAxiosInstance.request).toHaveBeenCalledWith({
+        method: "GET",
+        url: "health",
+        headers: {},
+        responseType: "json",
+      });
     });
   });
 });

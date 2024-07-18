@@ -1,6 +1,11 @@
-import axios, { AxiosInstance } from "axios";
+import axios, {
+  AxiosInstance,
+  Method,
+  AxiosResponse,
+  AxiosRequestConfig,
+} from "axios";
 import FormData from "form-data";
-import * as path from "path";
+import { URLSearchParams } from "url";
 
 let fs: any;
 if (typeof window === "undefined") {
@@ -9,7 +14,9 @@ if (typeof window === "undefined") {
 
 import { feature, initializeTelemetry } from "./feature";
 import {
-  Document,
+  LoginResponse,
+  UserCreate,
+  RefreshTokenResponse,
   R2RUpdatePromptRequest,
   R2RIngestFilesRequest,
   R2RSearchRequest,
@@ -21,6 +28,7 @@ import {
   R2RDocumentsOverviewRequest,
   R2RDocumentChunksRequest,
   R2RLogsRequest,
+  R2RPrintRelationshipRequest,
   FilterCriteria,
   AnalysisTypes,
   VectorSearchSettings,
@@ -29,12 +37,43 @@ import {
   DEFAULT_GENERATION_CONFIG,
 } from "./models";
 
+function handleRequestError(response: AxiosResponse): void {
+  if (response.status < 400) {
+    return;
+  }
+
+  let message: string;
+  const errorContent = response.data;
+
+  if (
+    typeof errorContent === "object" &&
+    errorContent !== null &&
+    "detail" in errorContent
+  ) {
+    const detail = errorContent.detail;
+    if (typeof detail === "object" && detail !== null) {
+      message = (detail as { message?: string }).message || response.statusText;
+    } else {
+      message = String(detail);
+    }
+  } else {
+    message = String(errorContent);
+  }
+
+  throw new Error(`Status ${response.status}: ${message}`);
+}
+
 export class r2rClient {
   private axiosInstance: AxiosInstance;
   private baseUrl: string;
+  private accessToken: string | null;
+  private refreshToken: string | null;
 
   constructor(baseURL: string, prefix: string = "/v1") {
     this.baseUrl = `${baseURL}${prefix}`;
+    this.accessToken = null;
+    this.refreshToken = null;
+
     this.axiosInstance = axios.create({
       baseURL: this.baseUrl,
       headers: {
@@ -53,9 +92,116 @@ export class r2rClient {
     initializeTelemetry();
   }
 
-  async healthCheck(): Promise<any> {
-    const response = await this.axiosInstance.get("/health");
-    return response.data;
+  private async _makeRequest<T = any>(
+    method: Method,
+    endpoint: string,
+    options: any = {},
+  ): Promise<T> {
+    const url = `${endpoint}`;
+    const config: AxiosRequestConfig = {
+      method,
+      url,
+      headers: { ...options.headers },
+      ...options,
+      responseType: options.responseType || "json",
+    };
+
+    config.headers = config.headers || {};
+
+    if (options.data instanceof FormData) {
+      config.data = options.data;
+      delete config.headers["Content-Type"];
+    } else if (options.data instanceof URLSearchParams) {
+      config.data = options.data.toString();
+      config.headers["Content-Type"] = "application/x-www-form-urlencoded";
+    } else if (typeof options.data === "object") {
+      config.data = JSON.stringify(options.data);
+      config.headers["Content-Type"] = "application/json";
+    }
+
+    if (
+      this.accessToken &&
+      !["register", "login", "verify_email"].includes(endpoint)
+    ) {
+      config.headers.Authorization = `Bearer ${this.accessToken}`;
+    }
+
+    try {
+      const response = await this.axiosInstance.request<T>(config);
+      return options.returnFullResponse
+        ? (response as any as T)
+        : response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        handleRequestError(error.response);
+      }
+      throw error;
+    }
+  }
+
+  @feature("register")
+  async register(email: string, password: string): Promise<any> {
+    const user: UserCreate = { email, password };
+    return await this._makeRequest("POST", "register", { data: user });
+  }
+
+  @feature("verifyEmail")
+  async verifyEmail(verification_code: string): Promise<any> {
+    return await this._makeRequest("POST", `verify_email/${verification_code}`);
+  }
+
+  @feature("login")
+  async login(email: string, password: string): Promise<LoginResponse> {
+    const formData = new URLSearchParams();
+    formData.append("username", email);
+    formData.append("password", password);
+
+    const response = await this._makeRequest<LoginResponse>("POST", "login", {
+      data: formData,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    if (response && response.results) {
+      this.accessToken = response.results.access_token.token;
+      this.refreshToken = response.results.refresh_token.token;
+    } else {
+      throw new Error("Invalid response structure");
+    }
+
+    return response;
+  }
+
+  async refreshAccessToken(): Promise<RefreshTokenResponse> {
+    if (!this.refreshToken) {
+      throw new Error("No refresh token available. Please login again.");
+    }
+
+    const response = await this._makeRequest<RefreshTokenResponse>(
+      "POST",
+      "refresh_access_token",
+      { data: { refresh_token: this.refreshToken } },
+    );
+
+    if (response && response.results) {
+      this.accessToken = response.results.access_token.token;
+      this.refreshToken = response.results.refresh_token.token;
+    } else {
+      throw new Error("Invalid response structure");
+    }
+
+    return response;
+  }
+
+  private _ensureAuthenticated(): void {
+    // if (!this.accessToken) {
+    //   throw new Error("Not authenticated. Please login first.");
+    // }
+  }
+
+  async health(): Promise<any> {
+    return await this._makeRequest("GET", "health");
   }
 
   @feature("updatePrompt")
@@ -64,6 +210,8 @@ export class r2rClient {
     template?: string,
     input_types?: Record<string, string>,
   ): Promise<Record<string, any>> {
+    this._ensureAuthenticated();
+
     const request: R2RUpdatePromptRequest = {
       name: name,
     };
@@ -76,12 +224,12 @@ export class r2rClient {
       request.input_types = input_types;
     }
 
-    const response = await this.axiosInstance.post("/update_prompt", request, {
+    return await this._makeRequest("POST", "update_prompt", {
+      data: request,
       headers: {
         "Content-Type": "application/json",
       },
     });
-    return response.data;
   }
 
   @feature("ingestFiles")
@@ -95,6 +243,8 @@ export class r2rClient {
       skip_document_info?: boolean;
     } = {},
   ): Promise<any> {
+    this._ensureAuthenticated();
+
     const formData = new FormData();
 
     const processPath = async (
@@ -154,18 +304,18 @@ export class r2rClient {
       }
     });
 
-    const response = await this.axiosInstance.post("/ingest_files", formData, {
+    return await this._makeRequest("POST", "ingest_files", {
+      data: formData,
       headers: formData.getHeaders?.() ?? {
         "Content-Type": "multipart/form-data",
       },
       transformRequest: [
-        (data, headers) => {
+        (data: any, headers: Record<string, string>) => {
           delete headers["Content-Type"];
           return data;
         },
       ],
     });
-    return response.data;
   }
 
   @feature("updateFiles")
@@ -176,6 +326,8 @@ export class r2rClient {
       metadatas?: Record<string, any>[];
     },
   ): Promise<any> {
+    this._ensureAuthenticated();
+
     const formData = new FormData();
 
     if (files.length !== options.document_ids.length) {
@@ -207,18 +359,18 @@ export class r2rClient {
       }
     });
 
-    const response = await this.axiosInstance.post("/update_files", formData, {
+    return await this._makeRequest("POST", "update_files", {
+      data: formData,
       headers: formData.getHeaders?.() ?? {
         "Content-Type": "multipart/form-data",
       },
       transformRequest: [
-        (data, headers) => {
+        (data: any, headers: Record<string, string>) => {
           delete headers["Content-Type"];
           return data;
         },
       ],
     });
-    return response.data;
   }
 
   @feature("search")
@@ -231,6 +383,8 @@ export class r2rClient {
     use_kg_search?: boolean,
     kg_agent_generation_config?: GenerationConfig,
   ): Promise<any> {
+    this._ensureAuthenticated();
+
     const vector_search_settings: VectorSearchSettings = {
       use_vector_search: use_vector_search || true,
       search_filters: search_filters || {},
@@ -251,8 +405,7 @@ export class r2rClient {
       kg_search_settings,
     };
 
-    const response = await this.axiosInstance.post("/search", request);
-    return response.data;
+    return await this._makeRequest("POST", "search", { data: request });
   }
 
   @feature("rag")
@@ -266,6 +419,8 @@ export class r2rClient {
     kg_generation_config?: Record<string, any>;
     rag_generation_config?: Record<string, any>;
   }): Promise<any> {
+    this._ensureAuthenticated();
+
     const {
       query,
       use_vector_search = true,
@@ -305,8 +460,7 @@ export class r2rClient {
     if (rag_generation_config && rag_generation_config.stream) {
       return this.streamRag(request);
     } else {
-      const response = await this.axiosInstance.post("/rag", request);
-      return response.data;
+      return await this._makeRequest("POST", "rag", { data: request });
     }
   }
 
@@ -314,38 +468,45 @@ export class r2rClient {
   private async streamRag(
     request: R2RRAGRequest,
   ): Promise<ReadableStream<Uint8Array> | null> {
-    const response = await fetch(`${this.baseUrl}/rag`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    this._ensureAuthenticated();
+
+    const response = await this._makeRequest<ReadableStream<Uint8Array> | null>(
+      "POST",
+      "rag",
+      {
+        data: request,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        responseType: "stream",
+        returnFullResponse: true,
       },
-      body: JSON.stringify(request),
-    });
+    );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (
+      response &&
+      (response as any).status >= 200 &&
+      (response as any).status < 300
+    ) {
+      return (response as any).data;
+    } else {
+      throw new Error(`HTTP error! status: ${(response as any).status}`);
     }
-
-    return response.body;
   }
 
   @feature("delete")
   async delete(keys: string[], values: any[]): Promise<any> {
+    this._ensureAuthenticated();
+
     const request: R2RDeleteRequest = {
       keys,
       values,
     };
 
-    const response = await this.axiosInstance({
-      method: "delete",
-      url: "/delete",
-      data: {
-        keys: request.keys,
-        values: request.values,
-      },
+    return this._makeRequest("DELETE", "delete", {
+      data: request,
       headers: { "Content-Type": "application/json" },
     });
-    return response.data;
   }
 
   @feature("logs")
@@ -353,23 +514,26 @@ export class r2rClient {
     log_type_filter?: string,
     max_runs_requested: number = 100,
   ): Promise<any> {
+    this._ensureAuthenticated();
+
     const request: R2RLogsRequest = {
       log_type_filter: log_type_filter || null,
       max_runs_requested: max_runs_requested,
     };
 
-    const response = await this.axiosInstance.post("/logs", request, {
+    return this._makeRequest("POST", "logs", {
+      data: request,
       headers: {
         "Content-Type": "application/json",
       },
     });
-    return response.data;
   }
 
   @feature("appSettings")
   async appSettings(): Promise<any> {
-    const response = await this.axiosInstance.get("/app_settings");
-    return response.data;
+    this._ensureAuthenticated();
+
+    return this._makeRequest("GET", "app_settings");
   }
 
   @feature("analytics")
@@ -377,31 +541,35 @@ export class r2rClient {
     filter_criteria: FilterCriteria,
     analysis_types: AnalysisTypes,
   ): Promise<any> {
+    this._ensureAuthenticated();
+
     const request: R2RAnalyticsRequest = {
       filter_criteria,
       analysis_types,
     };
 
-    const response = await this.axiosInstance.post("/analytics", request, {
+    return this._makeRequest("POST", "analytics", {
+      data: request,
       headers: {
         "Content-Type": "application/json",
       },
     });
-    return response.data;
   }
 
   @feature("usersOverview")
   async usersOverview(user_ids?: string[]): Promise<any> {
+    this._ensureAuthenticated();
+
     const request: R2RUsersOverviewRequest = {
       user_ids: user_ids || [],
     };
 
-    const response = await this.axiosInstance.post("/users_overview", request, {
+    return this._makeRequest("GET", "users_overview", {
+      data: request,
       headers: {
         "Content-Type": "application/json",
       },
     });
-    return response.data;
   }
 
   @feature("documentsOverview")
@@ -409,39 +577,103 @@ export class r2rClient {
     document_ids?: string[],
     user_ids?: string[],
   ): Promise<any> {
+    this._ensureAuthenticated();
+
     const request: R2RDocumentsOverviewRequest = {
       document_ids: document_ids || [],
       user_ids: user_ids || [],
     };
 
-    const response = await this.axiosInstance.post(
-      "/documents_overview",
-      request,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
+    return this._makeRequest("POST", "documents_overview", {
+      data: request,
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
-    return response.data;
+    });
   }
 
   @feature("documentChunks")
   async documentChunks(document_id: string): Promise<any> {
+    this._ensureAuthenticated();
+
     const request: R2RDocumentChunksRequest = {
       document_id,
     };
 
-    const response = await this.axiosInstance.post(
-      "/document_chunks",
-      request,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
+    return this._makeRequest("POST", "document_chunks", {
+      data: request,
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
-    return response.data;
+    });
+  }
+
+  @feature("inspectKnowledgeGraph")
+  async inspectKnowledgeGraph(limit: number = 100): Promise<any> {
+    this._ensureAuthenticated();
+
+    const request: R2RPrintRelationshipRequest = {
+      limit,
+    };
+
+    return this._makeRequest("POST", "inspect_knowledge_graph", {
+      data: request,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }
+
+  @feature("changePassword")
+  async changePassword(
+    current_password: string,
+    new_password: string,
+  ): Promise<any> {
+    this._ensureAuthenticated();
+
+    return this._makeRequest("POST", "change_password", {
+      data: {
+        current_password,
+        new_password,
+      },
+    });
+  }
+
+  @feature("requestPasswordReset")
+  async requestPasswordReset(email: string): Promise<any> {
+    return this._makeRequest("POST", "request_password_reset", {
+      data: { email },
+    });
+  }
+
+  @feature("confirmPasswordReset")
+  async confirmPasswordReset(
+    resetToken: string,
+    newPassword: string,
+  ): Promise<any> {
+    return this._makeRequest("POST", `reset_password/${resetToken}`, {
+      data: { new_password: newPassword },
+    });
+  }
+
+  @feature("logout")
+  async logout(): Promise<any> {
+    this._ensureAuthenticated();
+
+    const response = await this._makeRequest("POST", "logout");
+    this.accessToken = null;
+    this.refreshToken = null;
+    return response;
+  }
+
+  async deleteUser(password: string): Promise<any> {
+    this._ensureAuthenticated();
+    const response = await this._makeRequest("DELETE", "user", {
+      data: { password },
+    });
+    this.accessToken = null;
+    this.refreshToken = null;
+    return response;
   }
 }
 

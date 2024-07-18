@@ -1,3 +1,26 @@
+export interface UserCreate {
+  email: string;
+  password: string;
+}
+
+export interface TokenInfo {
+  token: string;
+}
+
+export interface LoginResponse {
+  results: {
+    access_token: TokenInfo;
+    refresh_token: TokenInfo;
+  };
+}
+
+export interface RefreshTokenResponse {
+  results: {
+    access_token: { token: string };
+    refresh_token: { token: string };
+  };
+}
+
 export interface GenerationConfig {
   temperature?: number;
   top_p?: number;
@@ -34,13 +57,6 @@ export interface VectorSearchSettings {
 export interface KGSearchSettings {
   use_kg_search: boolean;
   agent_generation_config?: Record<string, any>;
-}
-
-export interface Document {
-  id?: string;
-  type: string;
-  data: string;
-  metadata: Record<string, any>;
 }
 
 export interface R2RUpdatePromptRequest {
@@ -109,4 +125,8 @@ export interface R2RDocumentChunksRequest {
 export interface R2RLogsRequest {
   log_type_filter?: string | null;
   max_runs_requested: number;
+}
+
+export interface R2RPrintRelationshipRequest {
+  limit: number;
 }
