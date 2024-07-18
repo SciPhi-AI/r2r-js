@@ -37,11 +37,6 @@ import {
   DEFAULT_GENERATION_CONFIG,
 } from "./models";
 
-function isValidEmail(email: string): boolean {
-  const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-  return re.test(email);
-}
-
 function handleRequestError(response: AxiosResponse): void {
   if (response.status < 400) {
     return;
@@ -103,51 +98,39 @@ export class r2rClient {
     options: any = {},
   ): Promise<T> {
     const url = `${endpoint}`;
-    let headers: Record<string, string> = { ...(options.headers || {}) };
+    const config: AxiosRequestConfig = {
+      method,
+      url,
+      headers: { ...options.headers },
+      ...options,
+      responseType: options.responseType || "json",
+    };
+
+    config.headers = config.headers || {};
+
+    if (options.data instanceof FormData) {
+      config.data = options.data;
+      delete config.headers["Content-Type"];
+    } else if (options.data instanceof URLSearchParams) {
+      config.data = options.data.toString();
+      config.headers["Content-Type"] = "application/x-www-form-urlencoded";
+    } else if (typeof options.data === "object") {
+      config.data = JSON.stringify(options.data);
+      config.headers["Content-Type"] = "application/json";
+    }
 
     if (
       this.accessToken &&
       !["register", "login", "verify_email"].includes(endpoint)
     ) {
-      const authHeader = this._getAuthHeader();
-      if (authHeader.Authorization) {
-        headers.Authorization = authHeader.Authorization;
-      }
+      config.headers.Authorization = `Bearer ${this.accessToken}`;
     }
 
     try {
-      const config: AxiosRequestConfig = {
-        method,
-        url,
-        headers,
-        ...options,
-        responseType: options.responseType || "json",
-      };
-
-      config.headers = config.headers || {};
-
-      // If data is FormData, let axios handle the Content-Type
-      if (options.data instanceof FormData) {
-        config.data = options.data;
-        // Ensure we're not setting Content-Type for FormData
-        delete config.headers["Content-Type"];
-      } else if (options.data instanceof URLSearchParams) {
-        // If it's URLSearchParams, convert it to a string
-        config.data = options.data.toString();
-        config.headers["Content-Type"] = "application/x-www-form-urlencoded";
-      } else if (typeof options.data === "object") {
-        // For other object types, stringify and set Content-Type
-        config.data = JSON.stringify(options.data);
-        config.headers["Content-Type"] = "application/json";
-      }
-
       const response = await this.axiosInstance.request<T>(config);
-
-      if (options.returnFullResponse) {
-        return response as any as T;
-      }
-
-      return response.data;
+      return options.returnFullResponse
+        ? (response as any as T)
+        : response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         handleRequestError(error.response);
@@ -156,20 +139,9 @@ export class r2rClient {
     }
   }
 
-  private _getAuthHeader() {
-    if (this.accessToken) {
-      return { Authorization: `Bearer ${this.accessToken}` };
-    }
-    return {};
-  }
-
   @feature("register")
   async register(email: string, password: string): Promise<any> {
-    const formattedEmail = email.trim().toLowerCase();
-    if (!isValidEmail(formattedEmail)) {
-      throw new Error("Invalid email format");
-    }
-    const user: UserCreate = { email: formattedEmail, password };
+    const user: UserCreate = { email, password };
     return await this._makeRequest("POST", "register", { data: user });
   }
 

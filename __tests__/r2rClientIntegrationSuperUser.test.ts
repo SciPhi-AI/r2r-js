@@ -15,21 +15,9 @@ describe("r2rClient Integration Tests", () => {
     await expect(client.health()).resolves.not.toThrow();
   });
 
-  test("Register user", async () => {
-    await expect(
-      client.register("test@gmail.com", "password"),
-    ).resolves.not.toThrow();
-  });
-
-  test("Verify Email throws a 400 error", async () => {
-    await expect(client.verifyEmail("verification_code")).rejects.toThrow(
-      "Status 400: Email verification is not required",
-    );
-  });
-
   test("Login", async () => {
     await expect(
-      client.login("test@gmail.com", "password"),
+      client.login("admin@example.com", "change_me_immediately"),
     ).resolves.not.toThrow();
   });
 
@@ -40,7 +28,8 @@ describe("r2rClient Integration Tests", () => {
 
     await expect(
       client.ingestFiles(files, {
-        metadatas: [{ title: "myshkin.txt" }, { title: "karamozov.txt" }],
+        metadatas: [{ title: "raskolnikov.txt" }, { title: "karamozov.txt" }],
+        user_ids: ["123e4567-e89b-12d3-a456-426614174000"],
         skip_document_info: false,
       }),
     ).resolves.not.toThrow();
@@ -54,11 +43,11 @@ describe("r2rClient Integration Tests", () => {
 
   test("Update files", async () => {
     const updated_file = [
-      { path: "examples/data/folder/myshkin.txt", name: "myshkin.txt" },
+      { path: "examples/data/folder/myshkin.txt", name: "super_myshkin.txt" },
     ];
     await expect(
       client.updateFiles(updated_file, {
-        document_ids: ["06f6aab5-daa1-5b22-809c-d73a378600ed"],
+        document_ids: ["f3c6afa5-fc58-58b7-b797-f7148e5253c3"],
         metadatas: [{ title: "updated_karamozov.txt" }],
       }),
     ).resolves.not.toThrow();
@@ -74,47 +63,61 @@ describe("r2rClient Integration Tests", () => {
 
   test("Delete document", async () => {
     await expect(
-      client.delete(["document_id"], ["c621c119-e21d-5d11-a099-bab1993f76d0"]),
+      client.delete(["document_id"], ["cb6e55f3-cb3e-5646-ad52-42f06eb321f5"]),
     ).resolves.not.toThrow();
   });
 
-  test("Only a superuser can call app settings", async () => {
-    await expect(client.appSettings()).rejects.toThrow(
-      "Status 403: Only a superuser can call the `app_settings` endpoint.",
-    );
+  test("Get logs", async () => {
+    await expect(client.logs()).resolves.not.toThrow();
+  });
+
+  test("App settings", async () => {
+    await expect(client.appSettings()).resolves.not.toThrow();
+  });
+
+  test("Get analytics", async () => {
+    const filterCriteria: FilterCriteria = {
+      filters: {
+        search_latencies: "search_latency",
+      },
+    };
+
+    const analysisTypes: AnalysisTypes = {
+      analysis_types: {
+        search_latencies: ["basic_statistics", "search_latency"],
+      },
+    };
+
+    await expect(
+      client.analytics(filterCriteria, analysisTypes),
+    ).resolves.not.toThrow();
+  });
+
+  test("Get users overview", async () => {
+    await expect(client.usersOverview()).resolves.not.toThrow();
   });
 
   test("Get documents overview", async () => {
     await expect(client.documentsOverview()).resolves.not.toThrow();
   });
 
-  test("Logout", async () => {
-    await expect(client.logout()).resolves.not.toThrow();
-  });
-
-  test("Login after logout", async () => {
+  test("Get document chunks", async () => {
     await expect(
-      client.login("test@gmail.com", "password"),
+      client.documentChunks("43eebf9c-c2b4-59e5-993a-054bf4a5c423"),
     ).resolves.not.toThrow();
   });
 
   test("Clean up remaining documents", async () => {
     await expect(
-      client.delete(["document_id"], ["f58d4ec4-0274-56fa-b1ce-16aa3ba9ce3c"]),
+      client.delete(["document_id"], ["43eebf9c-c2b4-59e5-993a-054bf4a5c423"]),
     ).resolves.not.toThrow();
 
     await expect(
-      client.delete(["document_id"], ["06f6aab5-daa1-5b22-809c-d73a378600ed"]),
+      client.delete(["document_id"], ["f3c6afa5-fc58-58b7-b797-f7148e5253c3"]),
     ).resolves.not.toThrow;
   });
 
-  test("Change password", async () => {
-    await expect(
-      client.changePassword("password", "new_password"),
-    ).resolves.not.toThrow();
-  });
-
-  test("Delete User", async () => {
-    await expect(client.deleteUser("new_password")).resolves.not.toThrow();
+  test("Logout", async () => {
+    await expect(client.logout()).resolves.not.toThrow();
   });
 });
