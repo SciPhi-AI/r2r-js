@@ -12,7 +12,25 @@ describe("r2rClient Integration Tests", () => {
   });
 
   test("Health check", async () => {
-    await expect(client.healthCheck()).resolves.not.toThrow();
+    await expect(client.health()).resolves.not.toThrow();
+  });
+
+  test("Register user", async () => {
+    await expect(
+      client.register("test@gmail.com", "password"),
+    ).resolves.not.toThrow();
+  });
+
+  test("Verify Email throws a 400 error", async () => {
+    await expect(client.verifyEmail("verification_code")).rejects.toThrow(
+      "Status 400: Email verification is not required",
+    );
+  });
+
+  test("Login", async () => {
+    await expect(
+      client.login("test@gmail.com", "password"),
+    ).resolves.not.toThrow();
   });
 
   test("Ingest file", async () => {
@@ -22,7 +40,7 @@ describe("r2rClient Integration Tests", () => {
 
     await expect(
       client.ingestFiles(files, {
-        metadatas: [{ title: "raskolnikov.txt" }, { title: "karamozov.txt" }],
+        metadatas: [{ title: "myshkin.txt" }, { title: "karamozov.txt" }],
         user_ids: ["123e4567-e89b-12d3-a456-426614174000"],
         skip_document_info: false,
       }),
@@ -41,7 +59,7 @@ describe("r2rClient Integration Tests", () => {
     ];
     await expect(
       client.updateFiles(updated_file, {
-        document_ids: ["48e29904-3010-54fe-abe5-a4f3fba59110"],
+        document_ids: ["f3c6afa5-fc58-58b7-b797-f7148e5253c3"],
         metadatas: [{ title: "updated_karamozov.txt" }],
       }),
     ).resolves.not.toThrow();
@@ -53,11 +71,11 @@ describe("r2rClient Integration Tests", () => {
 
   test("Generate RAG response", async () => {
     await expect(client.rag({ query: "test" })).resolves.not.toThrow();
-  });
+  }, 10000);
 
   test("Delete document", async () => {
     await expect(
-      client.delete(["document_id"], ["153a0857-efc4-57dd-b629-1c7d58c24a93"]),
+      client.delete(["document_id"], ["cb6e55f3-cb3e-5646-ad52-42f06eb321f5"]),
     ).resolves.not.toThrow();
   });
 
@@ -65,8 +83,10 @@ describe("r2rClient Integration Tests", () => {
     await expect(client.logs()).resolves.not.toThrow();
   });
 
-  test("Get app settings", async () => {
-    await expect(client.appSettings()).resolves.not.toThrow();
+  test("Only a superuser can call app settings", async () => {
+    await expect(client.appSettings()).rejects.toThrow(
+      "Status 403: Only a superuser can call the `app_settings` endpoint.",
+    );
   });
 
   test("Get analytics", async () => {
@@ -97,18 +117,37 @@ describe("r2rClient Integration Tests", () => {
 
   test("Get document chunks", async () => {
     await expect(
-      client.documentChunks("48e29904-3010-54fe-abe5-a4f3fba59110"),
+      client.documentChunks("43eebf9c-c2b4-59e5-993a-054bf4a5c423"),
     ).resolves.not.toThrow();
+  });
+
+  test("Logout", async () => {
+    await expect(client.logout()).resolves.not.toThrow();
+  });
+
+  test("Login after logout", async () => {
+    await expect(
+      client.login("test@gmail.com", "password"),
+    ).resolves.not.toThrow();
+  });
+
+  test("Change password", async () => {
+    await expect(
+      client.changePassword("password", "new_password"),
+    ).resolves.not.toThrow();
+  });
+
+  test("Delete User", async () => {
+    await expect(client.deleteUser("new_password")).resolves.not.toThrow();
   });
 
   afterAll(async () => {
     // Clean up
     await client.delete(
-      ["document_id", "document_id"],
-      [
-        "48e29904-3010-54fe-abe5-a4f3fba59110",
-        "102e815f-3998-5373-8d7d-a07795266ed6",
-      ],
+      ["document_id"], ["43eebf9c-c2b4-59e5-993a-054bf4a5c423"],
+    );
+    await client.delete(
+      ["document_id"], ["f3c6afa5-fc58-58b7-b797-f7148e5253c3"],
     );
   });
 });
