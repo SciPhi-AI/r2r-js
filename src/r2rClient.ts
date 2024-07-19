@@ -108,15 +108,22 @@ export class r2rClient {
 
     config.headers = config.headers || {};
 
-    if (options.data instanceof FormData) {
-      config.data = options.data;
-      delete config.headers["Content-Type"];
-    } else if (options.data instanceof URLSearchParams) {
-      config.data = options.data.toString();
-      config.headers["Content-Type"] = "application/x-www-form-urlencoded";
-    } else if (typeof options.data === "object") {
-      config.data = JSON.stringify(options.data);
-      config.headers["Content-Type"] = "application/json";
+    if (options.data) {
+      if (typeof FormData !== "undefined" && options.data instanceof FormData) {
+        config.data = options.data;
+        delete config.headers["Content-Type"];
+      } else if (
+        typeof URLSearchParams !== "undefined" &&
+        options.data instanceof URLSearchParams
+      ) {
+        config.data = options.data.toString();
+        config.headers["Content-Type"] = "application/x-www-form-urlencoded";
+      } else if (typeof options.data === "object") {
+        config.data = JSON.stringify(options.data);
+        config.headers["Content-Type"] = "application/json";
+      } else {
+        config.data = options.data;
+      }
     }
 
     if (
