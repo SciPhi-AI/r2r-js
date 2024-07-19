@@ -121,7 +121,7 @@ export class r2rClient {
 
     if (
       this.accessToken &&
-      !["register", "login", "verify_email"].includes(endpoint)
+      !["register", "login", "verify_email", "health"].includes(endpoint)
     ) {
       config.headers.Authorization = `Bearer ${this.accessToken}`;
     }
