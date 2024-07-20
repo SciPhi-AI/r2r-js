@@ -134,8 +134,8 @@ export class r2rClient {
     }
 
     if (options.responseType === "stream") {
-      config.responseType = "arraybuffer";
       return new Promise<T>((resolve, reject) => {
+        let buffer = new Uint8Array(0);
         const stream = new ReadableStream({
           start: (controller) => {
             this.axiosInstance
@@ -144,16 +144,35 @@ export class r2rClient {
                 responseType: "arraybuffer",
                 onDownloadProgress: (progressEvent) => {
                   const chunk = progressEvent.event.currentTarget.response;
-                  controller.enqueue(new Uint8Array(chunk));
+                  const newBuffer = new Uint8Array(
+                    buffer.length + chunk.byteLength,
+                  );
+                  newBuffer.set(buffer);
+                  newBuffer.set(new Uint8Array(chunk), buffer.length);
+                  buffer = newBuffer;
+
+                  try {
+                    controller.enqueue(new Uint8Array(chunk));
+                  } catch (error) {
+                    console.warn("Stream closed, unable to enqueue more data");
+                  }
                 },
               })
-              .then((response) => {
-                controller.close();
-                resolve(stream as any as T);
-              })
+              .then((response) => {})
               .catch((error) => {
                 controller.error(error);
                 reject(error);
+              })
+              .finally(() => {
+                if (buffer.length > 0) {
+                  try {
+                    controller.enqueue(buffer);
+                  } catch (error) {
+                    console.warn("Unable to enqueue final data");
+                  }
+                }
+                controller.close();
+                resolve(stream as any as T);
               });
           },
         });
