@@ -479,30 +479,22 @@ export class r2rClient {
   @feature("streamingRag")
   private async streamRag(
     request: R2RRAGRequest,
-  ): Promise<ReadableStream<Uint8Array> | null> {
+  ): Promise<ReadableStream<Uint8Array>> {
     this._ensureAuthenticated();
 
-    const response = await this._makeRequest<ReadableStream<Uint8Array> | null>(
-      "POST",
-      "rag",
-      {
-        data: request,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        responseType: "stream",
-        returnFullResponse: true,
+    const response = await this._makeRequest<Response>("POST", "rag", {
+      data: request,
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      responseType: "stream",
+      returnFullResponse: true,
+    });
 
-    if (
-      response &&
-      (response as any).status >= 200 &&
-      (response as any).status < 300
-    ) {
-      return (response as any).data;
+    if (response.status >= 200 && response.status < 300) {
+      return response.body as ReadableStream<Uint8Array>;
     } else {
-      throw new Error(`HTTP error! status: ${(response as any).status}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
   }
 
