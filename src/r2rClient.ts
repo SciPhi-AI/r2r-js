@@ -133,6 +133,33 @@ export class r2rClient {
       config.headers.Authorization = `Bearer ${this.accessToken}`;
     }
 
+    if (options.responseType === "stream") {
+      config.responseType = "arraybuffer";
+      return new Promise<T>((resolve, reject) => {
+        const stream = new ReadableStream({
+          start: (controller) => {
+            this.axiosInstance
+              .request({
+                ...config,
+                responseType: "arraybuffer",
+                onDownloadProgress: (progressEvent) => {
+                  const chunk = progressEvent.event.currentTarget.response;
+                  controller.enqueue(new Uint8Array(chunk));
+                },
+              })
+              .then((response) => {
+                controller.close();
+                resolve(stream as any as T);
+              })
+              .catch((error) => {
+                controller.error(error);
+                reject(error);
+              });
+          },
+        });
+      });
+    }
+
     try {
       const response = await this.axiosInstance.request<T>(config);
       return options.returnFullResponse
@@ -482,20 +509,13 @@ export class r2rClient {
   ): Promise<ReadableStream<Uint8Array>> {
     this._ensureAuthenticated();
 
-    const response = await this._makeRequest<Response>("POST", "rag", {
+    return this._makeRequest<ReadableStream<Uint8Array>>("POST", "rag", {
       data: request,
       headers: {
         "Content-Type": "application/json",
       },
       responseType: "stream",
-      returnFullResponse: true,
     });
-
-    if (response.status >= 200 && response.status < 300) {
-      return response.body as ReadableStream<Uint8Array>;
-    } else {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
   }
 
   @feature("delete")
