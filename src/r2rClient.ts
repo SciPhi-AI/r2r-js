@@ -159,9 +159,14 @@ export class r2rClient {
 
   @feature("login")
   async login(email: string, password: string): Promise<LoginResponse> {
-    const formData = new URLSearchParams();
-    formData.append("username", email);
-    formData.append("password", password);
+    let formData;
+    if (typeof URLSearchParams !== "undefined") {
+      formData = new URLSearchParams();
+      formData.append("username", email);
+      formData.append("password", password);
+    } else {
+      formData = `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+    }
 
     const response = await this._makeRequest<LoginResponse>("POST", "login", {
       data: formData,
