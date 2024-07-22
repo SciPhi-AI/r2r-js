@@ -7,6 +7,11 @@ async function main() {
     { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
   ];
 
+  const EMAIL = "admin@example.com";
+  const PASSWORD = "change_me_immediately";
+  console.log("Logging in...");
+  await client.login(EMAIL, PASSWORD);
+
   console.log("Ingesting file...");
   const ingestResult = await client.ingestFiles(files, {
     metadatas: [{ title: "raskolnikov.txt" }],

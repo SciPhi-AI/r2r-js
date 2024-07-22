@@ -6,6 +6,7 @@ import axios, {
 } from "axios";
 import FormData from "form-data";
 import { URLSearchParams } from "url";
+import { Readable } from "stream";
 
 let fs: any;
 if (typeof window === "undefined") {
@@ -92,6 +93,12 @@ export class r2rClient {
     initializeTelemetry();
   }
 
+  private isReadable(obj: any): obj is Readable {
+    return (
+      obj && typeof obj.on === "function" && typeof obj.read === "function"
+    );
+  }
+
   private async _makeRequest<T = any>(
     method: Method,
     endpoint: string,
@@ -133,54 +140,22 @@ export class r2rClient {
       config.headers.Authorization = `Bearer ${this.accessToken}`;
     }
 
-    if (options.responseType === "stream") {
-      return new Promise<T>((resolve, reject) => {
-        let buffer = new Uint8Array(0);
-        const stream = new ReadableStream({
-          start: (controller) => {
-            this.axiosInstance
-              .request({
-                ...config,
-                responseType: "arraybuffer",
-                onDownloadProgress: (progressEvent) => {
-                  const chunk = progressEvent.event.currentTarget.response;
-                  const newBuffer = new Uint8Array(
-                    buffer.length + chunk.byteLength,
-                  );
-                  newBuffer.set(buffer);
-                  newBuffer.set(new Uint8Array(chunk), buffer.length);
-                  buffer = newBuffer;
-
-                  try {
-                    controller.enqueue(new Uint8Array(chunk));
-                  } catch (error) {
-                    console.warn("Stream closed, unable to enqueue more data");
-                  }
-                },
-              })
-              .then((response) => {})
-              .catch((error) => {
-                controller.error(error);
-                reject(error);
-              })
-              .finally(() => {
-                if (buffer.length > 0) {
-                  try {
-                    controller.enqueue(buffer);
-                  } catch (error) {
-                    console.warn("Unable to enqueue final data");
-                  }
-                }
-                controller.close();
-                resolve(stream as any as T);
-              });
-          },
-        });
-      });
-    }
-
     try {
-      const response = await this.axiosInstance.request<T>(config);
+      const response = await this.axiosInstance.request(config);
+
+      if (options.responseType === "stream") {
+        const stream = response.data as unknown as Readable;
+        return new ReadableStream({
+          start(controller) {
+            stream.on("data", (chunk: Buffer) => {
+              controller.enqueue(new Uint8Array(chunk));
+            });
+            stream.on("end", () => controller.close());
+            stream.on("error", (err: Error) => controller.error(err));
+          },
+        }) as unknown as T;
+      }
+
       return options.returnFullResponse
         ? (response as any as T)
         : response.data;
