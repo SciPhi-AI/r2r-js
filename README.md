@@ -52,6 +52,15 @@ const { r2rClient } = require("r2r-js");
 const client = new r2rClient("http://localhost:8000");
 ```
 
+## Login
+
+```javascript
+const EMAIL = "admin@example.com";
+const PASSWORD = "change_me_immediately";
+console.log("Logging in...");
+await client.login(EMAIL, PASSWORD);
+```
+
 ## Ingest files
 
 ```javascript
@@ -116,84 +125,6 @@ if (streamingRagResult instanceof ReadableStream) {
     console.log(new TextDecoder().decode(value));
   }
 }
-```
-
-# Hello r2r-js
-
-Building with the R2R JavaScript client is easy - see the `hello_r2r` example below:
-
-```javascript
-const { r2rClient } = require("r2r-js");
-
-const client = new r2rClient("http://localhost:8000");
-
-async function main() {
-  const files = [
-    { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
-  ];
-
-  console.log("Ingesting file...");
-  const ingestResult = await client.ingestFiles(files, {
-    metadatas: [{ title: "raskolnikov.txt" }],
-    user_ids: ["123e4567-e89b-12d3-a456-426614174000"],
-    skip_document_info: false,
-  });
-  console.log("Ingest result:", JSON.stringify(ingestResult, null, 2));
-
-  console.log("Performing RAG...");
-  const ragResponse = await client.rag({
-    query: "What does the file talk about?",
-    rag_generation_config: {
-      model: "gpt-4o",
-      temperature: 0.0,
-      stream: false,
-    },
-  });
-
-  console.log("Search Results:");
-  ragResponse.results.search_results.vector_search_results.forEach(
-    (result, index) => {
-      console.log(`\nResult ${index + 1}:`);
-      console.log(`Text: ${result.metadata.text.substring(0, 100)}...`);
-      console.log(`Score: ${result.score}`);
-    },
-  );
-
-  console.log("\nCompletion:");
-  console.log(ragResponse.results.completion.choices[0].message.content);
-}
-
-main();
-```
-
-And the results:
-
-```bash
-Ingesting file...
-Ingest result: {
-  "results": {
-    "processed_documents": [
-      "File 'raskolnikov.txt' processed successfully."
-    ],
-    "failed_documents": [],
-    "skipped_documents": []
-  }
-}
-Performing RAG...
-Search Results:
-
-Result 1:
-Text: praeterire culinam eius, cuius ianua semper aperta erat, cogebatur. Et quoties praeteribat,
-iuvenis ...
-Score: 0.08281802143835804
-
-Result 2:
-Text: In vespera praecipue calida ineunte Iulio iuvenis e cenaculo in quo hospitabatur in
-S. loco exiit et...
-Score: 0.052743945852283036
-
-Completion:
-The file discusses the experiences of a young man who is burdened by debt and is staying in a small room in a tall house. He feels anxious and ashamed whenever he passes by the kitchen, where the door is always open, and he is particularly worried about encountering his landlady, who provides him with meals and services. The young man tries to avoid meeting her, especially when he leaves his room, which is more like a closet than a proper room [1], [2].
 ```
 
 # Community and Support

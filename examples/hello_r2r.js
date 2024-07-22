@@ -1,21 +1,21 @@
 const { r2rClient } = require("r2r-js");
 
+// http://localhost:8000 or the address that you are running the R2R server
 const client = new r2rClient("http://localhost:8000");
 
 async function main() {
-  const files = [
-    { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
-  ];
-
   const EMAIL = "admin@example.com";
   const PASSWORD = "change_me_immediately";
   console.log("Logging in...");
   await client.login(EMAIL, PASSWORD);
 
+  const files = [
+    { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
+  ];
+
   console.log("Ingesting file...");
   const ingestResult = await client.ingestFiles(files, {
     metadatas: [{ title: "raskolnikov.txt" }],
-    user_ids: ["123e4567-e89b-12d3-a456-426614174000"],
     skip_document_info: false,
   });
   console.log("Ingest result:", JSON.stringify(ingestResult, null, 2));
@@ -41,6 +41,9 @@ async function main() {
 
   console.log("\nCompletion:");
   console.log(ragResponse.results.completion.choices[0].message.content);
+
+  console.log("Logging out...");
+  await client.logout();
 }
 
 main();
