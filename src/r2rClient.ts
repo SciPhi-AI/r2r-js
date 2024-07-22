@@ -6,7 +6,6 @@ import axios, {
 } from "axios";
 import FormData from "form-data";
 import { URLSearchParams } from "url";
-import { Readable } from "stream";
 
 let fs: any;
 if (typeof window === "undefined") {
@@ -93,12 +92,6 @@ export class r2rClient {
     initializeTelemetry();
   }
 
-  private isReadable(obj: any): obj is Readable {
-    return (
-      obj && typeof obj.on === "function" && typeof obj.read === "function"
-    );
-  }
-
   private async _makeRequest<T = any>(
     method: Method,
     endpoint: string,
@@ -140,22 +133,28 @@ export class r2rClient {
       config.headers.Authorization = `Bearer ${this.accessToken}`;
     }
 
-    try {
-      const response = await this.axiosInstance.request(config);
+    if (options.responseType === "stream") {
+      const fetchHeaders: Record<string, string> = {};
+      Object.entries(config.headers).forEach(([key, value]) => {
+        if (typeof value === "string") {
+          fetchHeaders[key] = value;
+        }
+      });
+      const response = await fetch(`${this.baseUrl}/${endpoint}`, {
+        method,
+        headers: fetchHeaders,
+        body: config.data,
+      });
 
-      if (options.responseType === "stream") {
-        const stream = response.data as unknown as Readable;
-        return new ReadableStream({
-          start(controller) {
-            stream.on("data", (chunk: Buffer) => {
-              controller.enqueue(new Uint8Array(chunk));
-            });
-            stream.on("end", () => controller.close());
-            stream.on("error", (err: Error) => controller.error(err));
-          },
-        }) as unknown as T;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      return response.body as unknown as T;
+    }
+
+    try {
+      const response = await this.axiosInstance.request(config);
       return options.returnFullResponse
         ? (response as any as T)
         : response.data;
