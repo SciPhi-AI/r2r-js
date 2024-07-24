@@ -581,7 +581,7 @@ export class r2rClient {
       user_ids: user_ids || [],
     };
 
-    return this._makeRequest("GET", "users_overview", {
+    return this._makeRequest("POST", "users_overview", {
       data: request,
       headers: {
         "Content-Type": "application/json",
