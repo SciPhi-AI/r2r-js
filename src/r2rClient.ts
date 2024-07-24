@@ -9,7 +9,9 @@ import { URLSearchParams } from "url";
 
 let fs: any;
 if (typeof window === "undefined") {
-  fs = require("fs");
+  import("fs").then((module) => {
+    fs = module;
+  });
 }
 
 import { feature, initializeTelemetry } from "./feature";
