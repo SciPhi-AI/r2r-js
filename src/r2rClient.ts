@@ -18,10 +18,12 @@ import { feature, initializeTelemetry } from "./feature";
 import {
   LoginResponse,
   UserCreate,
+  Message,
   RefreshTokenResponse,
   R2RUpdatePromptRequest,
   R2RIngestFilesRequest,
   R2RSearchRequest,
+  R2RRAGChatRequest,
   R2RRAGRequest,
   R2RDeleteRequest,
   R2RAnalyticsRequest,
@@ -52,7 +54,7 @@ function handleRequestError(response: AxiosResponse): void {
     errorContent !== null &&
     "detail" in errorContent
   ) {
-    const detail = errorContent.detail;
+    const { detail } = errorContent;
     if (typeof detail === "object" && detail !== null) {
       message = (detail as { message?: string }).message || response.statusText;
     } else {
@@ -685,6 +687,7 @@ export class r2rClient {
     return response;
   }
 
+  @feature("deleteUser")
   async deleteUser(password: string): Promise<any> {
     this._ensureAuthenticated();
     const response = await this._makeRequest("DELETE", "user", {
@@ -693,6 +696,74 @@ export class r2rClient {
     this.accessToken = null;
     this.refreshToken = null;
     return response;
+  }
+
+  @feature("ragChat")
+  async ragChat(params: {
+    messages: Message[];
+    use_vector_search?: boolean;
+    search_filters?: Record<string, any>;
+    search_limit?: number;
+    do_hybrid_search?: boolean;
+    use_kg_search?: boolean;
+    kg_search_generation_config?: Record<string, any>;
+    rag_generation_config?: GenerationConfig;
+    task_prompt_override?: string;
+    include_title_if_available?: boolean;
+  }): Promise<any> {
+    this._ensureAuthenticated();
+
+    const {
+      messages,
+      use_vector_search = true,
+      search_filters = {},
+      search_limit = 10,
+      do_hybrid_search = false,
+      use_kg_search = false,
+      kg_search_generation_config,
+      rag_generation_config,
+      task_prompt_override,
+      include_title_if_available = true,
+    } = params;
+
+    const request: R2RRAGChatRequest = {
+      messages,
+      vector_search_settings: {
+        use_vector_search,
+        search_filters,
+        search_limit,
+        do_hybrid_search,
+      },
+      kg_search_settings: {
+        use_kg_search,
+        kg_search_generation_config,
+      },
+      rag_generation_config,
+      task_prompt_override,
+      include_title_if_available,
+    };
+
+    if (rag_generation_config && rag_generation_config.stream) {
+      return this.streamRagChat(request);
+    } else {
+      console.log("RAG Chat Request:", JSON.stringify(request, null, 2));
+      return await this._makeRequest("POST", "rag_chat", { data: request });
+    }
+  }
+
+  @feature("streamingRagChat")
+  private async streamRagChat(
+    request: R2RRAGChatRequest,
+  ): Promise<ReadableStream<Uint8Array>> {
+    this._ensureAuthenticated();
+
+    return this._makeRequest<ReadableStream<Uint8Array>>("POST", "rag_chat", {
+      data: request,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      responseType: "stream",
+    });
   }
 }
 

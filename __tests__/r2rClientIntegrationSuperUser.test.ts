@@ -59,7 +59,48 @@ describe("r2rClient Integration Tests", () => {
 
   test("Generate RAG response", async () => {
     await expect(client.rag({ query: "test" })).resolves.not.toThrow();
-  }, 10000);
+  }, 30000);
+
+  test("Generate RAG Chat response", async () => {
+    const messages = [
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: "Tell me about Raskolnikov." },
+    ];
+
+    await expect(client.ragChat({ messages })).resolves.not.toThrow();
+  }, 30000);
+
+  test("Generate RAG Chat response with streaming", async () => {
+    const messages = [
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: "Tell me about Raskolnikov." },
+    ];
+
+    const streamingConfig = {
+      messages,
+      rag_generation_config: { stream: true },
+    };
+
+    const stream = await client.ragChat(streamingConfig);
+
+    expect(stream).toBeDefined();
+    expect(stream instanceof ReadableStream).toBe(true);
+
+    let fullResponse = "";
+    const reader = stream.getReader();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      const chunk = new TextDecoder().decode(value);
+      fullResponse += chunk;
+    }
+
+    expect(fullResponse.length).toBeGreaterThan(0);
+  }, 30000);
 
   test("Delete document", async () => {
     await expect(

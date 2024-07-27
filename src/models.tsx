@@ -59,6 +59,11 @@ export interface KGSearchSettings {
   agent_generation_config?: Record<string, any>;
 }
 
+export interface Message {
+  role: string;
+  content: string;
+}
+
 export interface R2RUpdatePromptRequest {
   name: string;
   template?: string;
@@ -125,6 +130,23 @@ export interface R2RDocumentChunksRequest {
 export interface R2RLogsRequest {
   log_type_filter?: string | null;
   max_runs_requested: number;
+}
+
+export interface R2RRAGChatRequest {
+  messages: Message[];
+  vector_search_settings?: {
+    use_vector_search: boolean;
+    search_filters?: Record<string, any>;
+    search_limit: number;
+    do_hybrid_search: boolean;
+  };
+  kg_search_settings?: {
+    use_kg_search: boolean;
+    kg_search_generation_config?: Record<string, any>;
+  };
+  rag_generation_config?: GenerationConfig;
+  task_prompt_override?: string;
+  include_title_if_available?: boolean;
 }
 
 export interface R2RPrintRelationshipRequest {

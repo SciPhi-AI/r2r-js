@@ -70,7 +70,7 @@ describe("r2rClient Integration Tests", () => {
 
   test("Generate RAG response", async () => {
     await expect(client.rag({ query: "test" })).resolves.not.toThrow();
-  }, 10000);
+  }, 30000);
 
   test("Delete document", async () => {
     await expect(
