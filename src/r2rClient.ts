@@ -240,6 +240,11 @@ export class r2rClient {
     return await this._makeRequest("GET", "health");
   }
 
+  async serverStats(): Promise<any> {
+    this._ensureAuthenticated();
+    return await this._makeRequest("GET", "server_stats");
+  }
+
   @feature("updatePrompt")
   async updatePrompt(
     name: string = "default_system",

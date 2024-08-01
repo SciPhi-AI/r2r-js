@@ -21,6 +21,10 @@ describe("r2rClient Integration Tests", () => {
     ).resolves.not.toThrow();
   });
 
+  test("Server stats", async () => {
+    await expect(client.serverStats()).resolves.not.toThrow();
+  });
+
   test("Ingest file", async () => {
     const files = [
       { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
