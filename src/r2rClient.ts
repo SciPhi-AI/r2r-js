@@ -23,7 +23,7 @@ import {
   R2RUpdatePromptRequest,
   R2RIngestFilesRequest,
   R2RSearchRequest,
-  R2RRAGAgentRequest,
+  R2RAgentRequest,
   R2RRAGRequest,
   R2RDeleteRequest,
   R2RAnalyticsRequest,
@@ -238,6 +238,11 @@ export class r2rClient {
 
   async health(): Promise<any> {
     return await this._makeRequest("GET", "health");
+  }
+
+  async serverStats(): Promise<any> {
+    this._ensureAuthenticated();
+    return await this._makeRequest("GET", "server_stats");
   }
 
   @feature("updatePrompt")
@@ -698,8 +703,8 @@ export class r2rClient {
     return response;
   }
 
-  @feature("ragAgent")
-  async ragAgent(params: {
+  @feature("agent")
+  async agent(params: {
     messages: Message[];
     use_vector_search?: boolean;
     search_filters?: Record<string, any>;
@@ -726,7 +731,7 @@ export class r2rClient {
       include_title_if_available = true,
     } = params;
 
-    const request: R2RRAGAgentRequest = {
+    const request: R2RAgentRequest = {
       messages,
       vector_search_settings: {
         use_vector_search,
@@ -744,18 +749,18 @@ export class r2rClient {
     };
 
     if (rag_generation_config && rag_generation_config.stream) {
-      return this.streamRagAgent(request);
+      return this.streamAgent(request);
     } else {
-      return await this._makeRequest("POST", "rag_agent", { data: request });
+      return await this._makeRequest("POST", "agent", { data: request });
     }
   }
 
-  private async streamRagAgent(
-    request: R2RRAGAgentRequest,
+  private async streamAgent(
+    request: R2RAgentRequest,
   ): Promise<ReadableStream<Uint8Array>> {
     this._ensureAuthenticated();
 
-    return this._makeRequest<ReadableStream<Uint8Array>>("POST", "rag_agent", {
+    return this._makeRequest<ReadableStream<Uint8Array>>("POST", "agent", {
       data: request,
       headers: {
         "Content-Type": "application/json",

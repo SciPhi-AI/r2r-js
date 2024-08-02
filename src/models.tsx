@@ -132,7 +132,7 @@ export interface R2RLogsRequest {
   max_runs_requested: number;
 }
 
-export interface R2RRAGAgentRequest {
+export interface R2RAgentRequest {
   messages: Message[];
   vector_search_settings?: {
     use_vector_search: boolean;

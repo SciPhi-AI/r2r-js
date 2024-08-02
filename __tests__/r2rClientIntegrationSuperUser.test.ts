@@ -21,6 +21,10 @@ describe("r2rClient Integration Tests", () => {
     ).resolves.not.toThrow();
   });
 
+  test("Server stats", async () => {
+    await expect(client.serverStats()).resolves.not.toThrow();
+  });
+
   test("Ingest file", async () => {
     const files = [
       { path: "examples/data/raskolnikov.txt", name: "raskolnikov.txt" },
@@ -67,7 +71,7 @@ describe("r2rClient Integration Tests", () => {
       { role: "user", content: "Tell me about Raskolnikov." },
     ];
 
-    await expect(client.ragAgent({ messages })).resolves.not.toThrow();
+    await expect(client.agent({ messages })).resolves.not.toThrow();
   }, 30000);
 
   test("Generate RAG Chat response with streaming", async () => {
@@ -81,7 +85,7 @@ describe("r2rClient Integration Tests", () => {
       rag_generation_config: { stream: true },
     };
 
-    const stream = await client.ragAgent(streamingConfig);
+    const stream = await client.agent(streamingConfig);
 
     expect(stream).toBeDefined();
     expect(stream instanceof ReadableStream).toBe(true);
