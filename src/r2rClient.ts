@@ -22,6 +22,7 @@ import {
   RefreshTokenResponse,
   R2RUpdatePromptRequest,
   R2RIngestFilesRequest,
+  R2RScoreCompletionRequest,
   R2RSearchRequest,
   R2RAgentRequest,
   R2RRAGRequest,
@@ -560,6 +561,23 @@ export class r2rClient {
     this._ensureAuthenticated();
 
     return this._makeRequest("GET", "app_settings");
+  }
+
+  @feature("scoreCompletion")
+  async scoreCompletion(message_id: string, score: number): Promise<any> {
+    this._ensureAuthenticated();
+
+    const request: R2RScoreCompletionRequest = {
+      message_id,
+      score,
+    };
+
+    return this._makeRequest("POST", "score_completion", {
+      data: request,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
   }
 
   @feature("analytics")

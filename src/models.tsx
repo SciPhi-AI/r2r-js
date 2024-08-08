@@ -83,6 +83,11 @@ export interface R2RUpdateFilesRequest {
   document_ids?: string[];
 }
 
+export interface R2RScoreCompletionRequest {
+  message_id: string;
+  score: number;
+}
+
 export interface R2RSearchRequest {
   query: string;
   vector_search_settings: VectorSearchSettings;

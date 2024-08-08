@@ -74,6 +74,15 @@ describe("r2rClient Integration Tests", () => {
     await expect(client.agent({ messages })).resolves.not.toThrow();
   }, 30000);
 
+  test("Score completion", async () => {
+    const message_id = "272c09d7-7958-5f77-a4e6-51649af999f5";
+    const score = 0.5;
+
+    await expect(
+      client.scoreCompletion(message_id, score),
+    ).resolves.not.toThrow();
+  });
+
   test("Generate RAG Chat response with streaming", async () => {
     const messages = [
       { role: "system", content: "You are a helpful assistant." },
